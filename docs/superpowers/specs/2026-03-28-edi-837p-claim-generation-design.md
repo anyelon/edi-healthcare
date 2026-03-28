@@ -2,20 +2,18 @@
 
 ## Context
 
-The claims-app currently generates EDI 837P files using hardcoded string concatenation in `EDI837Service`, pulling from loosely structured entities (`Company`, `Patient`, `Visit`, `PlaceOfService`). This design has several problems:
+Build a service that generates EDI 837P 5010 professional claims from patient encounter data stored in MongoDB. The service will:
 
-- No separation between clinical data concerns (diagnoses vs procedures are embedded in `Visit`)
-- Insurance data is embedded in `Patient` instead of being its own entity
-- No distinction between billing provider (organization) and rendering provider (practitioner)
-- EDI generation logic, data mapping, and formatting are all tangled in one method
-- ISA envelope values are hardcoded rather than configurable
-
-This redesign introduces a proper data model aligned with 837P requirements, a two-layer architecture (DB entities + 837 loop classes), and a centralized generator.
+- Model healthcare billing domain concepts (practices, providers, facilities, encounters, diagnoses, procedures, insurance coverage) as MongoDB documents
+- Map database entities into transient 837 segment loop classes that represent the EDI structure
+- Use a centralized generator to produce valid 837P files from those loop classes
+- Support configurable ISA envelope values for clearinghouse integration
+- Be tested using TDD with Testcontainers for MongoDB integration tests
 
 ## Architecture
 
 ```
-POST /api/claims/generate {patientId, dateOfService}
+POST /api/claims/generate {encounterId}
     │
     ▼
 ClaimsController
@@ -26,7 +24,7 @@ ClaimsService (orchestrates DB lookups)
     ├── Repositories: PatientRepository, PatientInsuranceRepository,
     │   EncounterRepository, EncounterDiagnosisRepository,
     │   EncounterProcedureRepository, PracticeRepository,
-    │   ProviderRepository, PayerRepository, PlaceOfServiceRepository
+    │   ProviderRepository, PayerRepository, FacilityRepository
     │
     ▼
 EDI837Mapper (DB entities → loop classes)
@@ -44,7 +42,9 @@ All `@Document` classes in `com.example.edi.common.document`, repositories in `c
 
 ### Reference Data
 
-#### Practice (replaces Company)
+See [erd.html](erd.html) — open in a browser to view the interactive diagram.
+
+#### Practice
 
 Collection: `practices`
 
@@ -88,19 +88,26 @@ Collection: `payers`
 | state | String | 2-letter state code |
 | zipCode | String | ZIP code |
 
-#### PlaceOfService (existing, unchanged)
+#### Facility
 
-Collection: `places_of_service`
+Collection: `facilities`
 
 | Field | Type | Description |
 |-------|------|-------------|
 | id | String | MongoDB ID |
-| code | String | POS code (e.g., "11") |
-| description | String | Description (e.g., "Office") |
+| name | String | Location name (e.g., "Sunshine Health - Downtown") |
+| practiceId | String | FK to Practice |
+| placeOfServiceCode | String | CMS POS code (e.g., "11") |
+| address | String | Street address |
+| city | String | City |
+| state | String | 2-letter state code |
+| zipCode | String | ZIP code |
+| phone | String | Facility phone |
+| npi | String | Facility NPI (optional — some facilities have their own) |
 
 ### Patient Data
 
-#### Patient (simplified — insurance fields removed)
+#### Patient
 
 Collection: `patients`
 
@@ -135,7 +142,7 @@ Collection: `patient_insurances`
 
 ### Clinical Data
 
-#### Encounter (replaces Visit)
+#### Encounter
 
 Collection: `encounters`
 
@@ -145,7 +152,7 @@ Collection: `encounters`
 | patientId | String | FK to Patient |
 | providerId | String | FK to Provider (rendering) |
 | practiceId | String | FK to Practice (billing) |
-| placeOfServiceCode | String | POS code (e.g., "11") |
+| facilityId | String | FK to Facility (where service was rendered) |
 | dateOfService | LocalDate | Service date |
 | authorizationNumber | String | Prior auth number (optional) |
 
@@ -181,33 +188,25 @@ Collection: `encounter_procedures`
 
 - `Company` — replaced by `Practice`
 - `Visit` — replaced by `Encounter` + `EncounterDiagnosis` + `EncounterProcedure`
+- `PlaceOfService` — replaced by `Facility`
 
-**Note:** `Company`, `Visit`, and `Patient` (with insurance fields) are also used by insurance-request-app and insurance-response-app. Those apps will need to be updated to use the new entities in a follow-up effort. This spec covers claims-app only.
+**Note:** `Company`, `Visit`, `PlaceOfService`, and `Patient` (with insurance fields) are also used by insurance-request-app and insurance-response-app. Those apps will need to be updated to use the new entities in a follow-up effort. This spec covers claims-app only.
 
 ### Entities to Modify
 
 - `Patient` — remove insurance fields (`insurancePayerId`, `insurancePayerName`, `insuranceGroupNumber`, `memberId`). Add `phone`.
 
-## Layer 2: 837 Segment Loop Classes
+## Layer 2: EDI Segment Loop Records
 
-Transient Java classes in `com.example.edi.claims.domain.loop`. These are **pure data holders** — no EDI formatting logic, no database access. Implemented as Java records.
+Pure data holders — no EDI formatting logic, no database access. Implemented as Java records.
 
-### EDI837Claim (root)
+### Shared Records (common module)
 
-```java
-public record EDI837Claim(
-    InterchangeEnvelope envelope,
-    FunctionalGroup functionalGroup,
-    TransactionHeader transactionHeader,
-    Submitter submitter,
-    Receiver receiver,
-    BillingProviderLoop billingProvider,
-    SubscriberLoop subscriber,
-    ClaimLoop claim
-) {}
-```
+Package: `com.example.edi.common.edi.loop`
 
-### InterchangeEnvelope → ISA/IEA
+These records are reused across 837, 270, and 271 transactions.
+
+#### InterchangeEnvelope → ISA/IEA
 
 ```java
 public record InterchangeEnvelope(
@@ -223,7 +222,7 @@ public record InterchangeEnvelope(
 ) {}
 ```
 
-### FunctionalGroup → GS/GE
+#### FunctionalGroup → GS/GE
 
 ```java
 public record FunctionalGroup(
@@ -235,7 +234,7 @@ public record FunctionalGroup(
 ) {}
 ```
 
-### TransactionHeader → ST/BHT
+#### TransactionHeader → ST/BHT
 
 ```java
 public record TransactionHeader(
@@ -246,7 +245,7 @@ public record TransactionHeader(
 ) {}
 ```
 
-### Submitter → NM1*41, PER
+#### Submitter → NM1*41, PER
 
 ```java
 public record Submitter(
@@ -256,7 +255,7 @@ public record Submitter(
 ) {}
 ```
 
-### Receiver → NM1*40
+#### Receiver → NM1*40
 
 ```java
 public record Receiver(
@@ -265,7 +264,7 @@ public record Receiver(
 ) {}
 ```
 
-### BillingProviderLoop → HL*20, NM1*85, N3, N4, REF*EI
+#### BillingProviderLoop → HL*20, NM1*85, N3, N4, REF*EI
 
 ```java
 public record BillingProviderLoop(
@@ -279,7 +278,7 @@ public record BillingProviderLoop(
 ) {}
 ```
 
-### SubscriberLoop → HL*22, SBR, NM1*IL, N3, N4, DMG, NM1*PR
+#### SubscriberLoop → HL*22, SBR, NM1*IL, N3, N4, DMG, NM1*PR
 
 ```java
 public record SubscriberLoop(
@@ -304,7 +303,26 @@ public record SubscriberLoop(
 ) {}
 ```
 
-### ClaimLoop → CLM, HI
+### 837-Specific Records (claims-app)
+
+Package: `com.example.edi.claims.domain.loop`
+
+#### EDI837Claim (root)
+
+```java
+public record EDI837Claim(
+    InterchangeEnvelope envelope,
+    FunctionalGroup functionalGroup,
+    TransactionHeader transactionHeader,
+    Submitter submitter,
+    Receiver receiver,
+    BillingProviderLoop billingProvider,
+    SubscriberLoop subscriber,
+    ClaimLoop claim
+) {}
+```
+
+#### ClaimLoop → CLM, HI
 
 ```java
 public record ClaimLoop(
@@ -316,7 +334,7 @@ public record ClaimLoop(
 ) {}
 ```
 
-### DiagnosisEntry
+#### DiagnosisEntry
 
 ```java
 public record DiagnosisEntry(
@@ -325,7 +343,7 @@ public record DiagnosisEntry(
 ) {}
 ```
 
-### ServiceLineLoop → LX, SV1, DTP
+#### ServiceLineLoop → LX, SV1, DTP
 
 ```java
 public record ServiceLineLoop(
@@ -351,7 +369,7 @@ Responsibility: Convert DB entities into an `EDI837Claim` object.
 ```
 Input:  Practice, Provider, Patient, PatientInsurance, Payer,
         Encounter, List<EncounterDiagnosis>, List<EncounterProcedure>,
-        PlaceOfService, InterchangeProperties (from YAML config)
+        Facility, InterchangeProperties (from YAML config)
 
 Output: EDI837Claim
 ```
@@ -388,16 +406,16 @@ Location: `com.example.edi.claims.service.ClaimsService`
 Responsibility: Orchestrate the full claim generation flow.
 
 ```
-Input:  patientId, dateOfService
-Flow:   1. Look up Patient by ID
-        2. Look up active PatientInsurance for patient
-        3. Look up Payer from PatientInsurance.payerId
-        4. Look up Encounter by patientId + dateOfService
+Input:  encounterId
+Flow:   1. Look up Encounter by ID
+        2. Look up Patient from encounter.patientId
+        3. Look up active PatientInsurance for patient
+        4. Look up Payer from PatientInsurance.payerId
         5. Look up EncounterDiagnosis records by encounterId
         6. Look up EncounterProcedure records by encounterId
         7. Look up Practice from encounter.practiceId
         8. Look up Provider from encounter.providerId
-        9. Look up PlaceOfService by encounter.placeOfServiceCode
+        9. Look up Facility from encounter.facilityId
        10. Call EDI837Mapper to build EDI837Claim
        11. Call EDI837Generator to produce EDI string
 Output: EDI string (returned as downloadable .edi file)
@@ -446,7 +464,7 @@ Creates sample data:
 - 1 Practice: "Sunshine Health Clinic", NPI 1234567890, Tax ID 59-1234567
 - 2 Providers: Dr. Sarah Johnson (Internal Medicine), Dr. Michael Chen (Family Medicine)
 - 1 Payer: Blue Cross Blue Shield, payer ID BCBS12345
-- 3 PlaceOfService: 11 (Office), 22 (Outpatient Hospital), 23 (Emergency Room)
+- 3 Facilities: "Main Office" (POS 11), "Outpatient Center" (POS 22), "City Hospital ER" (POS 23)
 - 2 Patients with active PatientInsurance records
 - 2 Encounters, each with 2 EncounterDiagnosis and 2 EncounterProcedure records
 
@@ -504,10 +522,11 @@ testImplementation 'org.testcontainers:junit-jupiter'
 
 ## Files to Create
 
-### common module
+### common module — documents and repositories
 - `common/src/main/java/com/example/edi/common/document/Practice.java`
 - `common/src/main/java/com/example/edi/common/document/Provider.java`
 - `common/src/main/java/com/example/edi/common/document/Payer.java`
+- `common/src/main/java/com/example/edi/common/document/Facility.java`
 - `common/src/main/java/com/example/edi/common/document/PatientInsurance.java`
 - `common/src/main/java/com/example/edi/common/document/Encounter.java`
 - `common/src/main/java/com/example/edi/common/document/EncounterDiagnosis.java`
@@ -515,21 +534,24 @@ testImplementation 'org.testcontainers:junit-jupiter'
 - `common/src/main/java/com/example/edi/common/repository/PracticeRepository.java`
 - `common/src/main/java/com/example/edi/common/repository/ProviderRepository.java`
 - `common/src/main/java/com/example/edi/common/repository/PayerRepository.java`
+- `common/src/main/java/com/example/edi/common/repository/FacilityRepository.java`
 - `common/src/main/java/com/example/edi/common/repository/PatientInsuranceRepository.java`
 - `common/src/main/java/com/example/edi/common/repository/EncounterRepository.java`
 - `common/src/main/java/com/example/edi/common/repository/EncounterDiagnosisRepository.java`
 - `common/src/main/java/com/example/edi/common/repository/EncounterProcedureRepository.java`
 
-### claims-app
+### common module — shared EDI loop records
+- `common/src/main/java/com/example/edi/common/edi/loop/InterchangeEnvelope.java`
+- `common/src/main/java/com/example/edi/common/edi/loop/FunctionalGroup.java`
+- `common/src/main/java/com/example/edi/common/edi/loop/TransactionHeader.java`
+- `common/src/main/java/com/example/edi/common/edi/loop/Submitter.java`
+- `common/src/main/java/com/example/edi/common/edi/loop/Receiver.java`
+- `common/src/main/java/com/example/edi/common/edi/loop/BillingProviderLoop.java`
+- `common/src/main/java/com/example/edi/common/edi/loop/SubscriberLoop.java`
+
+### claims-app — 837-specific loop records and services
 - `claims-app/src/main/java/com/example/edi/claims/config/InterchangeProperties.java`
 - `claims-app/src/main/java/com/example/edi/claims/domain/loop/EDI837Claim.java`
-- `claims-app/src/main/java/com/example/edi/claims/domain/loop/InterchangeEnvelope.java`
-- `claims-app/src/main/java/com/example/edi/claims/domain/loop/FunctionalGroup.java`
-- `claims-app/src/main/java/com/example/edi/claims/domain/loop/TransactionHeader.java`
-- `claims-app/src/main/java/com/example/edi/claims/domain/loop/Submitter.java`
-- `claims-app/src/main/java/com/example/edi/claims/domain/loop/Receiver.java`
-- `claims-app/src/main/java/com/example/edi/claims/domain/loop/BillingProviderLoop.java`
-- `claims-app/src/main/java/com/example/edi/claims/domain/loop/SubscriberLoop.java`
 - `claims-app/src/main/java/com/example/edi/claims/domain/loop/ClaimLoop.java`
 - `claims-app/src/main/java/com/example/edi/claims/domain/loop/DiagnosisEntry.java`
 - `claims-app/src/main/java/com/example/edi/claims/domain/loop/ServiceLineLoop.java`
@@ -548,7 +570,9 @@ testImplementation 'org.testcontainers:junit-jupiter'
 - `common/src/main/java/com/example/edi/common/document/Company.java`
 - `common/src/main/java/com/example/edi/common/document/Visit.java`
 - `common/src/main/java/com/example/edi/common/repository/CompanyRepository.java`
+- `common/src/main/java/com/example/edi/common/document/PlaceOfService.java`
 - `common/src/main/java/com/example/edi/common/repository/VisitRepository.java`
+- `common/src/main/java/com/example/edi/common/repository/PlaceOfServiceRepository.java`
 - `claims-app/src/main/java/com/example/edi/claims/service/EDI837Service.java` — replaced by EDI837Mapper + EDI837Generator
 
 ### Test Files to Create
@@ -563,5 +587,5 @@ testImplementation 'org.testcontainers:junit-jupiter'
 2. Start MongoDB via `docker-compose up -d`
 3. `./gradlew :claims-app:bootRun`
 4. `curl -X POST http://localhost:8080/api/dev/seed` — returns JSON summary
-5. `curl -X POST http://localhost:8080/api/claims/generate -H "Content-Type: application/json" -d '{"patientId":"<id>","dateOfService":"2026-03-15"}'` — returns downloadable .edi file
+5. `curl -X POST http://localhost:8080/api/claims/generate -H "Content-Type: application/json" -d '{"encounterId":"<id>"}'` — returns downloadable .edi file
 6. Validate the .edi output contains correct ISA, GS, ST, CLM, HI, SV1, SE, GE, IEA segments

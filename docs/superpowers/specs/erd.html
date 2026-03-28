@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EDI 837P — Entity Relationship Diagram</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 2rem;
+            background: #f8f9fa;
+            color: #333;
+        }
+        h1 {
+            font-size: 1.4rem;
+            margin-bottom: 0.5rem;
+        }
+        p {
+            color: #666;
+            margin-bottom: 2rem;
+        }
+        .mermaid {
+            background: #fff;
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <h1>EDI 837P Claim Generation — Entity Relationship Diagram</h1>
+    <p>Database entities and their relationships for the claims-app data model.</p>
+
+    <div class="mermaid">
+erDiagram
+    Practice ||--o{ Provider : employs
+    Practice ||--o{ Facility : operates
+    Practice ||--o{ Encounter : "bills for"
+
+    Provider ||--o{ Encounter : renders
+
+    Patient ||--o{ PatientInsurance : "has coverage"
+    Patient ||--o{ Encounter : visits
+
+    Payer ||--o{ PatientInsurance : covers
+
+    Facility ||--o{ Encounter : "location of"
+
+    Encounter ||--o{ EncounterDiagnosis : "diagnosed with"
+    Encounter ||--o{ EncounterProcedure : performed
+
+    Practice {
+        String id PK
+        String name
+        String npi
+        String taxId
+        String taxonomyCode
+        String address
+        String city
+        String state
+        String zipCode
+        String contactPhone
+    }
+
+    Provider {
+        String id PK
+        String firstName
+        String lastName
+        String npi
+        String taxonomyCode
+        String practiceId FK
+    }
+
+    Facility {
+        String id PK
+        String name
+        String practiceId FK
+        String placeOfServiceCode
+        String address
+        String city
+        String state
+        String zipCode
+        String phone
+        String npi
+    }
+
+    Payer {
+        String id PK
+        String name
+        String payerId
+        String address
+        String city
+        String state
+        String zipCode
+    }
+
+    Patient {
+        String id PK
+        String firstName
+        String lastName
+        LocalDate dateOfBirth
+        String gender
+        String address
+        String city
+        String state
+        String zipCode
+        String phone
+    }
+
+    PatientInsurance {
+        String id PK
+        String patientId FK
+        String payerId FK
+        String memberId
+        String groupNumber
+        String policyType
+        String subscriberRelationship
+        LocalDate effectiveDate
+        LocalDate terminationDate
+    }
+
+    Encounter {
+        String id PK
+        String patientId FK
+        String providerId FK
+        String practiceId FK
+        String facilityId FK
+        LocalDate dateOfService
+        String authorizationNumber
+    }
+
+    EncounterDiagnosis {
+        String id PK
+        String encounterId FK
+        int rank
+        String diagnosisCode
+        String description
+    }
+
+    EncounterProcedure {
+        String id PK
+        String encounterId FK
+        int lineNumber
+        String procedureCode
+        String modifiers
+        BigDecimal chargeAmount
+        int units
+        String unitType
+        String diagnosisPointers
+    }
+    </div>
+
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+</body>
+</html>
