@@ -1,0 +1,6 @@
+rootProject.name = 'edi-healthcare'
+
+include 'common'
+include 'claims-app'
+include 'insurance-request-app'
+include 'insurance-response-app'

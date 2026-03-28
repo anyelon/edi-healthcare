@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  mongodb:
+    image: mongo:7
+    container_name: edi-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: edi_healthcare
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:

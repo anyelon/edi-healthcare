@@ -19,6 +19,9 @@ public class Patient {
     private String city;
     private String state;
     private String zipCode;
+    private String memberId;
+    private String insurancePayerId;
+    private String insurancePayerName;
 
     public Patient() {}
 
@@ -51,4 +54,13 @@ public class Patient {
 
     public String getZipCode() { return zipCode; }
     public void setZipCode(String zipCode) { this.zipCode = zipCode; }
+
+    public String getMemberId() { return memberId; }
+    public void setMemberId(String memberId) { this.memberId = memberId; }
+
+    public String getInsurancePayerId() { return insurancePayerId; }
+    public void setInsurancePayerId(String insurancePayerId) { this.insurancePayerId = insurancePayerId; }
+
+    public String getInsurancePayerName() { return insurancePayerName; }
+    public void setInsurancePayerName(String insurancePayerName) { this.insurancePayerName = insurancePayerName; }
 }

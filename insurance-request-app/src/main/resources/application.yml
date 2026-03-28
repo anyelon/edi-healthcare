@@ -1,0 +1,15 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: insurance-request-app
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/edi_healthcare
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
