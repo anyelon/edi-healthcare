@@ -1,0 +1,24 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: claims-app
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/edi_healthcare
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+edi:
+  interchange:
+    sender-id-qualifier: ZZ
+    sender-id: CLEARINGHOUSE01
+    receiver-id-qualifier: ZZ
+    receiver-id: PAYERID001
+    ack-requested: "0"
+    usage-indicator: T
