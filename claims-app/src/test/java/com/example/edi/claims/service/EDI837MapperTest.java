@@ -2,6 +2,8 @@ package com.example.edi.claims.service;
 
 import com.example.edi.claims.config.InterchangeProperties;
 import com.example.edi.claims.domain.loop.EDI837Claim;
+import com.example.edi.claims.domain.loop.SubscriberGroup;
+import com.example.edi.claims.dto.EncounterBundle;
 import com.example.edi.common.document.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,7 +20,6 @@ class EDI837MapperTest {
 
     private InterchangeProperties props;
     private Practice practice;
-    private Provider provider;
     private Patient patient;
     private Payer payer;
     private PatientInsurance insurance;
@@ -43,12 +44,8 @@ class EDI837MapperTest {
         practice.setZipCode("32801");
         practice.setContactPhone("5551234567");
 
-        provider = new Provider();
-        provider.setFirstName("Sarah");
-        provider.setLastName("Johnson");
-        provider.setNpi("9876543210");
-
         patient = new Patient();
+        patient.setId("P001");
         patient.setFirstName("JOHN");
         patient.setLastName("SMITH");
         patient.setDateOfBirth(LocalDate.of(1985, 7, 15));
@@ -105,9 +102,12 @@ class EDI837MapperTest {
         procedures = List.of(proc1, proc2);
     }
 
+    private EncounterBundle makeBundle() {
+        return new EncounterBundle(patient, insurance, payer, encounter, diagnoses, procedures, facility);
+    }
+
     private EDI837Claim doMap() {
-        return mapper.map(practice, provider, patient, insurance, payer, encounter,
-                diagnoses, procedures, facility, props);
+        return mapper.map(practice, List.of(makeBundle()), props);
     }
 
     @Test
@@ -127,56 +127,60 @@ class EDI837MapperTest {
     void map_subscriberFromPatientAndInsurance() {
         EDI837Claim claim = doMap();
 
-        assertThat(claim.subscriber().firstName()).isEqualTo("JOHN");
-        assertThat(claim.subscriber().lastName()).isEqualTo("SMITH");
-        assertThat(claim.subscriber().memberId()).isEqualTo("MEM987654321");
-        assertThat(claim.subscriber().groupNumber()).isEqualTo("GRP100234");
-        assertThat(claim.subscriber().policyType()).isEqualTo("MC");
-        assertThat(claim.subscriber().payerName()).isEqualTo("BLUE CROSS BLUE SHIELD");
-        assertThat(claim.subscriber().payerId()).isEqualTo("BCBS12345");
-        assertThat(claim.subscriber().address()).isEqualTo("456 OAK AVENUE");
-        assertThat(claim.subscriber().city()).isEqualTo("ORLANDO");
-        assertThat(claim.subscriber().state()).isEqualTo("FL");
-        assertThat(claim.subscriber().zipCode()).isEqualTo("32806");
+        assertThat(claim.subscriberGroups()).hasSize(1);
+        var subscriber = claim.subscriberGroups().getFirst().subscriber();
+        assertThat(subscriber.firstName()).isEqualTo("JOHN");
+        assertThat(subscriber.lastName()).isEqualTo("SMITH");
+        assertThat(subscriber.memberId()).isEqualTo("MEM987654321");
+        assertThat(subscriber.groupNumber()).isEqualTo("GRP100234");
+        assertThat(subscriber.policyType()).isEqualTo("MC");
+        assertThat(subscriber.payerName()).isEqualTo("BLUE CROSS BLUE SHIELD");
+        assertThat(subscriber.payerId()).isEqualTo("BCBS12345");
+        assertThat(subscriber.address()).isEqualTo("456 OAK AVENUE");
+        assertThat(subscriber.city()).isEqualTo("ORLANDO");
+        assertThat(subscriber.state()).isEqualTo("FL");
+        assertThat(subscriber.zipCode()).isEqualTo("32806");
     }
 
     @Test
     void map_dateOfBirthFormattedAsYYYYMMDD() {
         EDI837Claim claim = doMap();
 
-        assertThat(claim.subscriber().dateOfBirth()).isEqualTo("19850715");
+        assertThat(claim.subscriberGroups().getFirst().subscriber().dateOfBirth()).isEqualTo("19850715");
     }
 
     @Test
     void map_genderMappedCorrectly() {
         EDI837Claim claimM = doMap();
-        assertThat(claimM.subscriber().genderCode()).isEqualTo("M");
+        assertThat(claimM.subscriberGroups().getFirst().subscriber().genderCode()).isEqualTo("M");
 
         patient.setGender("F");
         EDI837Claim claimF = doMap();
-        assertThat(claimF.subscriber().genderCode()).isEqualTo("F");
+        assertThat(claimF.subscriberGroups().getFirst().subscriber().genderCode()).isEqualTo("F");
 
         patient.setGender(null);
         EDI837Claim claimNull = doMap();
-        assertThat(claimNull.subscriber().genderCode()).isEqualTo("U");
+        assertThat(claimNull.subscriberGroups().getFirst().subscriber().genderCode()).isEqualTo("U");
     }
 
     @Test
     void map_diagnosesOrderedByRank() {
         EDI837Claim claim = doMap();
 
-        assertThat(claim.claim().diagnoses()).hasSize(2);
-        assertThat(claim.claim().diagnoses().get(0).rank()).isEqualTo(1);
-        assertThat(claim.claim().diagnoses().get(0).diagnosisCode()).isEqualTo("J06.9");
-        assertThat(claim.claim().diagnoses().get(1).rank()).isEqualTo(2);
-        assertThat(claim.claim().diagnoses().get(1).diagnosisCode()).isEqualTo("R05.9");
+        var claimDiagnoses = claim.subscriberGroups().getFirst().claims().getFirst().diagnoses();
+        assertThat(claimDiagnoses).hasSize(2);
+        assertThat(claimDiagnoses.get(0).rank()).isEqualTo(1);
+        assertThat(claimDiagnoses.get(0).diagnosisCode()).isEqualTo("J06.9");
+        assertThat(claimDiagnoses.get(1).rank()).isEqualTo(2);
+        assertThat(claimDiagnoses.get(1).diagnosisCode()).isEqualTo("R05.9");
     }
 
     @Test
     void map_totalChargeCalculatedFromProcedures() {
         EDI837Claim claim = doMap();
 
-        assertThat(claim.claim().totalCharge()).isEqualByComparingTo(new BigDecimal("250.00"));
+        assertThat(claim.subscriberGroups().getFirst().claims().getFirst().totalCharge())
+                .isEqualByComparingTo(new BigDecimal("250.00"));
     }
 
     @Test
@@ -195,6 +199,94 @@ class EDI837MapperTest {
     void map_placeOfServiceFromFacility() {
         EDI837Claim claim = doMap();
 
-        assertThat(claim.claim().placeOfServiceCode()).isEqualTo("11");
+        assertThat(claim.subscriberGroups().getFirst().claims().getFirst().placeOfServiceCode()).isEqualTo("11");
+    }
+
+    @Test
+    void map_singleEncounter_producesSingleSubscriberGroupWithOneClaim() {
+        EDI837Claim claim = doMap();
+
+        assertThat(claim.subscriberGroups()).hasSize(1);
+        assertThat(claim.subscriberGroups().getFirst().claims()).hasSize(1);
+    }
+
+    @Test
+    void map_twoEncountersSamePatient_producesSingleSubscriberGroupWithTwoClaims() {
+        Encounter encounter2 = new Encounter();
+        encounter2.setDateOfService(LocalDate.of(2026, 3, 16));
+
+        EncounterDiagnosis diag = new EncounterDiagnosis();
+        diag.setRank(1);
+        diag.setDiagnosisCode("Z00.00");
+
+        EncounterProcedure proc = new EncounterProcedure();
+        proc.setLineNumber(1);
+        proc.setProcedureCode("99214");
+        proc.setModifiers(List.of());
+        proc.setChargeAmount(new BigDecimal("200.00"));
+        proc.setUnits(1);
+        proc.setUnitType("UN");
+        proc.setDiagnosisPointers(List.of(1));
+
+        Facility facility2 = new Facility();
+        facility2.setPlaceOfServiceCode("11");
+
+        EncounterBundle bundle1 = makeBundle();
+        EncounterBundle bundle2 = new EncounterBundle(patient, insurance, payer, encounter2, List.of(diag), List.of(proc), facility2);
+
+        EDI837Claim claim = mapper.map(practice, List.of(bundle1, bundle2), props);
+
+        assertThat(claim.subscriberGroups()).hasSize(1);
+        assertThat(claim.subscriberGroups().getFirst().claims()).hasSize(2);
+    }
+
+    @Test
+    void map_twoEncountersDifferentPatients_producesTwoSubscriberGroups() {
+        Patient patient2 = new Patient();
+        patient2.setId("P002");
+        patient2.setFirstName("JANE");
+        patient2.setLastName("DOE");
+        patient2.setDateOfBirth(LocalDate.of(1990, 1, 1));
+        patient2.setGender("F");
+        patient2.setAddress("789 ELM ST");
+        patient2.setCity("ORLANDO");
+        patient2.setState("FL");
+        patient2.setZipCode("32807");
+
+        PatientInsurance insurance2 = new PatientInsurance();
+        insurance2.setMemberId("MEM111222333");
+        insurance2.setGroupNumber("GRP200345");
+        insurance2.setPolicyType("MC");
+        insurance2.setSubscriberRelationship("self");
+
+        Encounter encounter2 = new Encounter();
+        encounter2.setDateOfService(LocalDate.of(2026, 3, 16));
+
+        EncounterDiagnosis diag = new EncounterDiagnosis();
+        diag.setRank(1);
+        diag.setDiagnosisCode("Z00.00");
+
+        EncounterProcedure proc = new EncounterProcedure();
+        proc.setLineNumber(1);
+        proc.setProcedureCode("99214");
+        proc.setModifiers(List.of());
+        proc.setChargeAmount(new BigDecimal("200.00"));
+        proc.setUnits(1);
+        proc.setUnitType("UN");
+        proc.setDiagnosisPointers(List.of(1));
+
+        Facility facility2 = new Facility();
+        facility2.setPlaceOfServiceCode("11");
+
+        EncounterBundle bundle1 = makeBundle();
+        EncounterBundle bundle2 = new EncounterBundle(patient2, insurance2, payer, encounter2, List.of(diag), List.of(proc), facility2);
+
+        EDI837Claim claim = mapper.map(practice, List.of(bundle1, bundle2), props);
+
+        assertThat(claim.subscriberGroups()).hasSize(2);
+        assertThat(claim.subscriberGroups().get(0).claims()).hasSize(1);
+        assertThat(claim.subscriberGroups().get(1).claims()).hasSize(1);
+        assertThat(claim.subscriberGroups().get(0).subscriber().lastName()).isEqualTo("SMITH");
+        assertThat(claim.subscriberGroups().get(1).subscriber().lastName()).isEqualTo("DOE");
     }
 }

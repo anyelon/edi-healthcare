@@ -2,6 +2,7 @@ package com.example.edi.claims.service;
 
 import com.example.edi.claims.config.InterchangeProperties;
 import com.example.edi.claims.domain.loop.EDI837Claim;
+import com.example.edi.claims.dto.EncounterBundle;
 import com.example.edi.common.document.*;
 import com.example.edi.common.repository.*;
 import org.junit.jupiter.api.Test;
@@ -66,14 +67,16 @@ class ClaimsServiceTest {
         when(encounterDiagnosisRepository.findByEncounterIdOrderByRankAsc(encounterId)).thenReturn(List.of());
         when(encounterProcedureRepository.findByEncounterIdOrderByLineNumberAsc(encounterId)).thenReturn(List.of());
         when(practiceRepository.findById("PRAC001")).thenReturn(Optional.of(practice));
-        when(providerRepository.findById("PROV001")).thenReturn(Optional.of(provider));
         when(facilityRepository.findById("FAC001")).thenReturn(Optional.of(facility));
-        when(edi837Mapper.map(practice, provider, patient, insurance, payer,
-                encounter, List.of(), List.of(), facility, interchangeProperties))
+
+        List<EncounterBundle> expectedBundles = List.of(
+                new EncounterBundle(patient, insurance, payer, encounter, List.of(), List.of(), facility)
+        );
+        when(edi837Mapper.map(eq(practice), eq(expectedBundles), eq(interchangeProperties)))
                 .thenReturn(claim);
         when(edi837Generator.generate(claim)).thenReturn("EDI_CONTENT");
 
-        String result = claimsService.generateClaim(encounterId);
+        String result = claimsService.generateClaim(List.of(encounterId));
 
         assertEquals("EDI_CONTENT", result);
         verify(edi837Generator).generate(claim);
@@ -83,7 +86,7 @@ class ClaimsServiceTest {
     void generateClaim_encounterNotFound_throwsException() {
         when(encounterRepository.findById(anyString())).thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class, () -> claimsService.generateClaim("ENC001"));
+        assertThrows(RuntimeException.class, () -> claimsService.generateClaim(List.of("ENC001")));
     }
 
     @Test
@@ -93,7 +96,7 @@ class ClaimsServiceTest {
         when(encounterRepository.findById(anyString())).thenReturn(Optional.of(encounter));
         when(patientRepository.findById(anyString())).thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class, () -> claimsService.generateClaim("ENC001"));
+        assertThrows(RuntimeException.class, () -> claimsService.generateClaim(List.of("ENC001")));
     }
 
     @Test
@@ -105,6 +108,6 @@ class ClaimsServiceTest {
         when(patientRepository.findById(anyString())).thenReturn(Optional.of(patient));
         when(patientInsuranceRepository.findByPatientIdAndTerminationDateIsNull(anyString())).thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class, () -> claimsService.generateClaim("ENC001"));
+        assertThrows(RuntimeException.class, () -> claimsService.generateClaim(List.of("ENC001")));
     }
 }

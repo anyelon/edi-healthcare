@@ -5,6 +5,8 @@ import com.example.edi.claims.domain.loop.ClaimLoop;
 import com.example.edi.claims.domain.loop.DiagnosisEntry;
 import com.example.edi.claims.domain.loop.EDI837Claim;
 import com.example.edi.claims.domain.loop.ServiceLineLoop;
+import com.example.edi.claims.domain.loop.SubscriberGroup;
+import com.example.edi.claims.dto.EncounterBundle;
 import com.example.edi.common.document.*;
 import com.example.edi.common.edi.loop.*;
 import org.springframework.stereotype.Service;
@@ -13,8 +15,11 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class EDI837Mapper {
@@ -24,14 +29,7 @@ public class EDI837Mapper {
     private static final DateTimeFormatter HHMM     = DateTimeFormatter.ofPattern("HHmm");
 
     public EDI837Claim map(Practice practice,
-                           Provider provider,
-                           Patient patient,
-                           PatientInsurance insurance,
-                           Payer payer,
-                           Encounter encounter,
-                           List<EncounterDiagnosis> diagnoses,
-                           List<EncounterProcedure> procedures,
-                           Facility facility,
+                           List<EncounterBundle> bundles,
                            InterchangeProperties props) {
 
         LocalDateTime now = LocalDateTime.now();
@@ -42,6 +40,9 @@ public class EDI837Mapper {
         long millis        = System.currentTimeMillis();
         String controlNum9 = String.format("%09d", millis % 1_000_000_000L);
         String controlNum5 = String.format("%05d", millis % 100_000L);
+
+        // Use the first bundle's payer for the receiver
+        EncounterBundle firstBundle = bundles.getFirst();
 
         InterchangeEnvelope envelope = new InterchangeEnvelope(
                 props.senderIdQualifier(),
@@ -77,8 +78,8 @@ public class EDI837Mapper {
         );
 
         Receiver receiver = new Receiver(
-                payer.getName(),
-                payer.getPayerId()
+                firstBundle.payer().getName(),
+                firstBundle.payer().getPayerId()
         );
 
         BillingProviderLoop billingProvider = new BillingProviderLoop(
@@ -91,33 +92,67 @@ public class EDI837Mapper {
                 practice.getZipCode()
         );
 
-        SubscriberLoop subscriber = new SubscriberLoop(
-                mapSubscriberRelationship(insurance.getSubscriberRelationship()),
-                insurance.getGroupNumber(),
-                insurance.getPolicyType(),
-                patient.getLastName(),
-                patient.getFirstName(),
-                insurance.getMemberId(),
-                patient.getAddress(),
-                patient.getCity(),
-                patient.getState(),
-                patient.getZipCode(),
-                formatDate(patient.getDateOfBirth()),
-                mapGender(patient.getGender()),
-                payer.getName(),
-                payer.getPayerId()
-        );
+        // Group bundles by subscriber key (patientId + memberId)
+        Map<String, List<EncounterBundle>> grouped = new LinkedHashMap<>();
+        for (EncounterBundle bundle : bundles) {
+            String key = bundle.patient().getId() + "|" + bundle.insurance().getMemberId();
+            grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(bundle);
+        }
 
-        List<DiagnosisEntry> diagnosisEntries = diagnoses.stream()
+        List<SubscriberGroup> subscriberGroups = new ArrayList<>();
+        for (List<EncounterBundle> groupBundles : grouped.values()) {
+            EncounterBundle representative = groupBundles.getFirst();
+            Patient patient = representative.patient();
+            PatientInsurance insurance = representative.insurance();
+            Payer payer = representative.payer();
+
+            SubscriberLoop subscriberLoop = new SubscriberLoop(
+                    mapSubscriberRelationship(insurance.getSubscriberRelationship()),
+                    insurance.getGroupNumber(),
+                    insurance.getPolicyType(),
+                    patient.getLastName(),
+                    patient.getFirstName(),
+                    insurance.getMemberId(),
+                    patient.getAddress(),
+                    patient.getCity(),
+                    patient.getState(),
+                    patient.getZipCode(),
+                    formatDate(patient.getDateOfBirth()),
+                    mapGender(patient.getGender()),
+                    payer.getName(),
+                    payer.getPayerId()
+            );
+
+            List<ClaimLoop> claims = new ArrayList<>();
+            for (EncounterBundle bundle : groupBundles) {
+                claims.add(buildClaimLoop(bundle));
+            }
+
+            subscriberGroups.add(new SubscriberGroup(subscriberLoop, claims));
+        }
+
+        return new EDI837Claim(
+                envelope,
+                functionalGroup,
+                transactionHeader,
+                submitter,
+                receiver,
+                billingProvider,
+                subscriberGroups
+        );
+    }
+
+    private ClaimLoop buildClaimLoop(EncounterBundle bundle) {
+        List<DiagnosisEntry> diagnosisEntries = bundle.diagnoses().stream()
                 .sorted(Comparator.comparingInt(EncounterDiagnosis::getRank))
                 .map(d -> new DiagnosisEntry(d.getRank(), d.getDiagnosisCode()))
                 .toList();
 
-        String dateOfService = encounter.getDateOfService() != null
-                ? encounter.getDateOfService().format(YYYYMMDD)
+        String dateOfService = bundle.encounter().getDateOfService() != null
+                ? bundle.encounter().getDateOfService().format(YYYYMMDD)
                 : "";
 
-        List<ServiceLineLoop> serviceLines = procedures.stream()
+        List<ServiceLineLoop> serviceLines = bundle.procedures().stream()
                 .sorted(Comparator.comparingInt(EncounterProcedure::getLineNumber))
                 .map(p -> new ServiceLineLoop(
                         p.getLineNumber(),
@@ -131,27 +166,16 @@ public class EDI837Mapper {
                 ))
                 .toList();
 
-        BigDecimal totalCharge = procedures.stream()
+        BigDecimal totalCharge = bundle.procedures().stream()
                 .map(EncounterProcedure::getChargeAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        ClaimLoop claimLoop = new ClaimLoop(
-                insurance.getMemberId(),
+        return new ClaimLoop(
+                bundle.insurance().getMemberId(),
                 totalCharge,
-                facility.getPlaceOfServiceCode(),
+                bundle.facility().getPlaceOfServiceCode(),
                 diagnosisEntries,
                 serviceLines
-        );
-
-        return new EDI837Claim(
-                envelope,
-                functionalGroup,
-                transactionHeader,
-                submitter,
-                receiver,
-                billingProvider,
-                subscriber,
-                claimLoop
         );
     }
 

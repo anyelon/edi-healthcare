@@ -77,6 +77,9 @@ class ClaimsGenerationIT {
     private EncounterProcedureRepository encounterProcedureRepository;
 
     private String encounterId;
+    private String encounterId2;
+    private String practiceId;
+    private String facilityId;
 
     @BeforeEach
     void setUp() {
@@ -102,6 +105,7 @@ class ClaimsGenerationIT {
         practice.setZipCode("32801");
         practice.setContactPhone("5551234567");
         practice = practiceRepository.save(practice);
+        practiceId = practice.getId();
 
         // Provider
         Provider provider = new Provider();
@@ -109,7 +113,7 @@ class ClaimsGenerationIT {
         provider.setLastName("Johnson");
         provider.setNpi("9876543210");
         provider.setTaxonomyCode("207R00000X");
-        provider.setPracticeId(practice.getId());
+        provider.setPracticeId(practiceId);
         provider = providerRepository.save(provider);
 
         // Payer
@@ -125,13 +129,14 @@ class ClaimsGenerationIT {
         // Facility
         Facility facility = new Facility();
         facility.setName("Main Office");
-        facility.setPracticeId(practice.getId());
+        facility.setPracticeId(practiceId);
         facility.setPlaceOfServiceCode("11");
         facility.setAddress("100 MEDICAL PLAZA DR");
         facility.setCity("ORLANDO");
         facility.setState("FL");
         facility.setZipCode("32801");
         facility = facilityRepository.save(facility);
+        facilityId = facility.getId();
 
         // Patient
         Patient patient = new Patient();
@@ -156,24 +161,24 @@ class ClaimsGenerationIT {
         insurance.setMemberId("MEM987654321");
         patientInsuranceRepository.save(insurance);
 
-        // Encounter
+        // Encounter 1
         Encounter encounter = new Encounter();
         encounter.setPatientId(patient.getId());
         encounter.setProviderId(provider.getId());
-        encounter.setPracticeId(practice.getId());
-        encounter.setFacilityId(facility.getId());
+        encounter.setPracticeId(practiceId);
+        encounter.setFacilityId(facilityId);
         encounter.setDateOfService(LocalDate.of(2026, 3, 15));
         encounter = encounterRepository.save(encounter);
         encounterId = encounter.getId();
 
-        // Diagnosis
+        // Diagnosis for encounter 1
         EncounterDiagnosis diagnosis = new EncounterDiagnosis();
         diagnosis.setEncounterId(encounterId);
         diagnosis.setDiagnosisCode("J06.9");
         diagnosis.setRank(1);
         encounterDiagnosisRepository.save(diagnosis);
 
-        // Procedure
+        // Procedure for encounter 1
         EncounterProcedure procedure = new EncounterProcedure();
         procedure.setEncounterId(encounterId);
         procedure.setLineNumber(1);
@@ -184,11 +189,40 @@ class ClaimsGenerationIT {
         procedure.setModifiers(List.of());
         procedure.setDiagnosisPointers(List.of(1));
         encounterProcedureRepository.save(procedure);
+
+        // Encounter 2 (same patient)
+        Encounter encounter2 = new Encounter();
+        encounter2.setPatientId(patient.getId());
+        encounter2.setProviderId(provider.getId());
+        encounter2.setPracticeId(practiceId);
+        encounter2.setFacilityId(facilityId);
+        encounter2.setDateOfService(LocalDate.of(2026, 3, 16));
+        encounter2 = encounterRepository.save(encounter2);
+        encounterId2 = encounter2.getId();
+
+        // Diagnosis for encounter 2
+        EncounterDiagnosis diagnosis2 = new EncounterDiagnosis();
+        diagnosis2.setEncounterId(encounterId2);
+        diagnosis2.setDiagnosisCode("Z00.00");
+        diagnosis2.setRank(1);
+        encounterDiagnosisRepository.save(diagnosis2);
+
+        // Procedure for encounter 2
+        EncounterProcedure procedure2 = new EncounterProcedure();
+        procedure2.setEncounterId(encounterId2);
+        procedure2.setLineNumber(1);
+        procedure2.setProcedureCode("99214");
+        procedure2.setChargeAmount(new BigDecimal("200.00"));
+        procedure2.setUnits(1);
+        procedure2.setUnitType("UN");
+        procedure2.setModifiers(List.of());
+        procedure2.setDiagnosisPointers(List.of(1));
+        encounterProcedureRepository.save(procedure2);
     }
 
     @Test
-    void generateClaim_returnsValidEDI837() {
-        Map<String, String> requestBody = Map.of("encounterId", encounterId);
+    void generateClaim_singleEncounter_returnsValidEDI837() {
+        Map<String, Object> requestBody = Map.of("encounterIds", List.of(encounterId));
 
         ResponseEntity<String> response = restTemplate.postForEntity(
                 url("/api/claims/generate"),
@@ -212,8 +246,29 @@ class ClaimsGenerationIT {
     }
 
     @Test
+    void generateClaim_multipleEncountersSamePatient_returnsMultipleCLMs() {
+        Map<String, Object> requestBody = Map.of("encounterIds", List.of(encounterId, encounterId2));
+
+        ResponseEntity<String> response = restTemplate.postForEntity(
+                url("/api/claims/generate"),
+                requestBody,
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        String body = response.getBody();
+        assertThat(body).isNotNull();
+        // Should have one subscriber HL loop and two CLM segments
+        assertThat(body).contains("HL*2*1*22*0");
+        assertThat(countOccurrences(body, "CLM*")).isEqualTo(2);
+        assertThat(countOccurrences(body, "SBR*")).isEqualTo(1);
+        assertThat(body).contains("SV1*HC:99213");
+        assertThat(body).contains("SV1*HC:99214");
+    }
+
+    @Test
     void generateClaim_unknownEncounter_returns500() {
-        Map<String, String> requestBody = Map.of("encounterId", "NONEXISTENT");
+        Map<String, Object> requestBody = Map.of("encounterIds", List.of("NONEXISTENT"));
 
         ResponseEntity<String> response = restTemplate.postForEntity(
                 url("/api/claims/generate"),
@@ -222,5 +277,15 @@ class ClaimsGenerationIT {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    private int countOccurrences(String text, String sub) {
+        int count = 0;
+        int idx = 0;
+        while ((idx = text.indexOf(sub, idx)) != -1) {
+            count++;
+            idx += sub.length();
+        }
+        return count;
     }
 }

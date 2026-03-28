@@ -1123,3 +1123,102 @@ cat claim.edi
 Expected: Valid 837P EDI file with ISA, GS, ST, BHT, NM1, CLM, HI, SV1, DTP, SE, GE, IEA segments
 
 - [ ] **Step 3: Commit any final fixes if needed**
+
+---
+
+### Task 13: Refactor to multi-encounter claim generation
+
+**Files:**
+- Create: `claims-app/src/main/java/com/example/edi/claims/domain/loop/SubscriberGroup.java`
+- Modify: `claims-app/src/main/java/com/example/edi/claims/domain/loop/EDI837Claim.java`
+- Modify: `claims-app/src/main/java/com/example/edi/claims/dto/ClaimsRequest.java`
+- Modify: `claims-app/src/main/java/com/example/edi/claims/service/EDI837Mapper.java`
+- Modify: `claims-app/src/main/java/com/example/edi/claims/service/EDI837Generator.java`
+- Modify: `claims-app/src/main/java/com/example/edi/claims/service/ClaimsService.java`
+- Modify: `claims-app/src/main/java/com/example/edi/claims/controller/ClaimsController.java`
+- Modify: `claims-app/src/test/java/com/example/edi/claims/service/EDI837GeneratorTest.java`
+- Modify: `claims-app/src/test/java/com/example/edi/claims/service/EDI837MapperTest.java`
+- Modify: `claims-app/src/test/java/com/example/edi/claims/controller/ClaimsControllerTest.java`
+- Modify: `claims-app/src/test/java/com/example/edi/claims/ClaimsGenerationIT.java`
+
+- [ ] **Step 1: Create SubscriberGroup record**
+
+```java
+package com.example.edi.claims.domain.loop;
+
+import com.example.edi.common.edi.loop.SubscriberLoop;
+import java.util.List;
+
+public record SubscriberGroup(
+    SubscriberLoop subscriber,
+    List<ClaimLoop> claims
+) {}
+```
+
+- [ ] **Step 2: Update EDI837Claim to hold List<SubscriberGroup>**
+
+Change from single `SubscriberLoop subscriber` + `ClaimLoop claim` to `List<SubscriberGroup> subscriberGroups`.
+
+```java
+public record EDI837Claim(
+    InterchangeEnvelope envelope,
+    FunctionalGroup functionalGroup,
+    TransactionHeader transactionHeader,
+    Submitter submitter,
+    Receiver receiver,
+    BillingProviderLoop billingProvider,
+    List<SubscriberGroup> subscriberGroups
+) {}
+```
+
+- [ ] **Step 3: Update ClaimsRequest DTO**
+
+Change from `@NotBlank String encounterId` to `@NotEmpty List<@NotBlank String> encounterIds`.
+
+```java
+package com.example.edi.claims.dto;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import java.util.List;
+
+public record ClaimsRequest(
+        @NotEmpty List<@NotBlank String> encounterIds
+) {}
+```
+
+- [ ] **Step 4: Update EDI837Mapper — accept multiple encounters, group by subscriber**
+
+Change `map()` to accept a list of encounter data bundles and group them by subscriber (patientId + memberId). Each group becomes a `SubscriberGroup` with one `SubscriberLoop` and multiple `ClaimLoop` entries.
+
+- [ ] **Step 5: Update EDI837Generator — iterate subscriber groups and claims**
+
+Change from writing a single subscriber HL and single CLM to iterating `subscriberGroups`. Each group gets its own HL*22 subscriber loop, and within it, each claim gets its own CLM/HI/service line segments. Track HL counter (incrementing for each subscriber).
+
+- [ ] **Step 6: Update ClaimsService**
+
+Change `generateClaim(String encounterId)` to `generateClaim(List<String> encounterIds)`. Look up all encounter data in a loop, collect into a list, pass to mapper.
+
+- [ ] **Step 7: Update ClaimsController**
+
+Change to call `claimsService.generateClaim(request.encounterIds())`.
+
+- [ ] **Step 8: Update tests**
+
+Update all test fixtures to use the new `List<SubscriberGroup>` structure:
+- EDI837GeneratorTest: test single subscriber/single claim, single subscriber/multi claim, multi subscriber/multi claim
+- EDI837MapperTest: test grouping logic — same patient encounters grouped, different patient encounters separated
+- ClaimsControllerTest: use `{"encounterIds":["ENC001"]}` format
+- ClaimsGenerationIT: test single and multi-encounter generation
+
+- [ ] **Step 9: Run all tests**
+
+Run: `./gradlew :claims-app:test`
+Expected: All tests PASS
+
+- [ ] **Step 10: Commit**
+
+```bash
+git add -A
+git commit -m "feat: support multi-encounter claim generation with subscriber grouping"
+```

@@ -4,6 +4,7 @@ import com.example.edi.claims.domain.loop.ClaimLoop;
 import com.example.edi.claims.domain.loop.DiagnosisEntry;
 import com.example.edi.claims.domain.loop.EDI837Claim;
 import com.example.edi.claims.domain.loop.ServiceLineLoop;
+import com.example.edi.claims.domain.loop.SubscriberGroup;
 import com.example.edi.common.edi.loop.BillingProviderLoop;
 import com.example.edi.common.edi.loop.FunctionalGroup;
 import com.example.edi.common.edi.loop.InterchangeEnvelope;
@@ -22,68 +23,79 @@ import static org.assertj.core.api.Assertions.assertThat;
 class EDI837GeneratorTest {
 
     private EDI837Generator generator;
-    private EDI837Claim claim;
+    private InterchangeEnvelope envelope;
+    private FunctionalGroup functionalGroup;
+    private TransactionHeader transactionHeader;
+    private Submitter submitter;
+    private Receiver receiver;
+    private BillingProviderLoop billingProvider;
 
     @BeforeEach
     void setUp() {
         generator = new EDI837Generator();
 
-        var envelope = new InterchangeEnvelope(
+        envelope = new InterchangeEnvelope(
             "ZZ", "SENDER001", "ZZ", "RECEIVER01",
             "260315", "1430", "000000001", "0", "T"
         );
 
-        var functionalGroup = new FunctionalGroup(
+        functionalGroup = new FunctionalGroup(
             "SENDER001", "RECEIVER01", "20260315", "1430", "1"
         );
 
-        var transactionHeader = new TransactionHeader(
+        transactionHeader = new TransactionHeader(
             "0001", "000000001", "20260315", "1430"
         );
 
-        var submitter = new Submitter(
+        submitter = new Submitter(
             "SUNSHINE HEALTH CLINIC", "1234567890", "5551234567"
         );
 
-        var receiver = new Receiver(
+        receiver = new Receiver(
             "BLUE CROSS BLUE SHIELD", "BCBS12345"
         );
 
-        var billingProvider = new BillingProviderLoop(
+        billingProvider = new BillingProviderLoop(
             "SUNSHINE HEALTH CLINIC", "1234567890", "591234567",
             "100 MEDICAL PLAZA DR", "ORLANDO", "FL", "32801"
         );
+    }
 
-        var subscriber = new SubscriberLoop(
+    private SubscriberLoop makeSubscriber(String lastName, String firstName, String memberId) {
+        return new SubscriberLoop(
             "P", "GRP100234", "MC",
-            "SMITH", "JOHN", "MEM987654321",
+            lastName, firstName, memberId,
             "456 OAK AVENUE", "ORLANDO", "FL", "32806",
             "19850715", "M",
             "BLUE CROSS BLUE SHIELD", "BCBS12345"
         );
+    }
 
+    private ClaimLoop makeClaimLoop(String claimId, BigDecimal totalCharge) {
         var diagnoses = List.of(
             new DiagnosisEntry(1, "J06.9"),
             new DiagnosisEntry(2, "R05.9")
         );
-
         var serviceLines = List.of(
             new ServiceLineLoop(1, "99213", List.of(), new BigDecimal("150.00"), 1, "UN", List.of(1, 2), "20260315"),
             new ServiceLineLoop(2, "87880", List.of(), new BigDecimal("100.00"), 1, "UN", List.of(1), "20260315")
         );
+        return new ClaimLoop(claimId, totalCharge, "11", diagnoses, serviceLines);
+    }
 
-        var claimLoop = new ClaimLoop(
-            "MEM987654321", new BigDecimal("250.00"), "11", diagnoses, serviceLines
-        );
-
-        claim = new EDI837Claim(
+    private EDI837Claim buildClaim(List<SubscriberGroup> groups) {
+        return new EDI837Claim(
             envelope, functionalGroup, transactionHeader,
-            submitter, receiver, billingProvider, subscriber, claimLoop
+            submitter, receiver, billingProvider, groups
         );
     }
 
     @Test
-    void generate_producesValidISASegment() {
+    void generate_singleSubscriberSingleClaim_producesValidISASegment() {
+        var subscriber = makeSubscriber("SMITH", "JOHN", "MEM987654321");
+        var claimLoop = makeClaimLoop("MEM987654321", new BigDecimal("250.00"));
+        var claim = buildClaim(List.of(new SubscriberGroup(subscriber, List.of(claimLoop))));
+
         String edi = generator.generate(claim);
 
         assertThat(edi).startsWith("ISA*");
@@ -92,14 +104,22 @@ class EDI837GeneratorTest {
     }
 
     @Test
-    void generate_producesCorrectGSVersion() {
+    void generate_singleSubscriberSingleClaim_producesCorrectGSVersion() {
+        var subscriber = makeSubscriber("SMITH", "JOHN", "MEM987654321");
+        var claimLoop = makeClaimLoop("MEM987654321", new BigDecimal("250.00"));
+        var claim = buildClaim(List.of(new SubscriberGroup(subscriber, List.of(claimLoop))));
+
         String edi = generator.generate(claim);
 
         assertThat(edi).contains("005010X222A1");
     }
 
     @Test
-    void generate_producesCorrectSTBHT() {
+    void generate_singleSubscriberSingleClaim_producesCorrectSTBHT() {
+        var subscriber = makeSubscriber("SMITH", "JOHN", "MEM987654321");
+        var claimLoop = makeClaimLoop("MEM987654321", new BigDecimal("250.00"));
+        var claim = buildClaim(List.of(new SubscriberGroup(subscriber, List.of(claimLoop))));
+
         String edi = generator.generate(claim);
 
         assertThat(edi).contains("ST*837*0001*005010X222A1~");
@@ -107,7 +127,11 @@ class EDI837GeneratorTest {
     }
 
     @Test
-    void generate_producesHIWithCorrectQualifiers() {
+    void generate_singleSubscriberSingleClaim_producesHIWithCorrectQualifiers() {
+        var subscriber = makeSubscriber("SMITH", "JOHN", "MEM987654321");
+        var claimLoop = makeClaimLoop("MEM987654321", new BigDecimal("250.00"));
+        var claim = buildClaim(List.of(new SubscriberGroup(subscriber, List.of(claimLoop))));
+
         String edi = generator.generate(claim);
 
         assertThat(edi).contains("ABK:J06.9");
@@ -115,7 +139,11 @@ class EDI837GeneratorTest {
     }
 
     @Test
-    void generate_producesSV1WithDiagnosisPointers() {
+    void generate_singleSubscriberSingleClaim_producesSV1WithDiagnosisPointers() {
+        var subscriber = makeSubscriber("SMITH", "JOHN", "MEM987654321");
+        var claimLoop = makeClaimLoop("MEM987654321", new BigDecimal("250.00"));
+        var claim = buildClaim(List.of(new SubscriberGroup(subscriber, List.of(claimLoop))));
+
         String edi = generator.generate(claim);
 
         assertThat(edi).contains("SV1*HC:99213*150.00*UN*1***1:2~");
@@ -123,14 +151,22 @@ class EDI837GeneratorTest {
     }
 
     @Test
-    void generate_IEAControlNumberMatchesISA() {
+    void generate_singleSubscriberSingleClaim_IEAControlNumberMatchesISA() {
+        var subscriber = makeSubscriber("SMITH", "JOHN", "MEM987654321");
+        var claimLoop = makeClaimLoop("MEM987654321", new BigDecimal("250.00"));
+        var claim = buildClaim(List.of(new SubscriberGroup(subscriber, List.of(claimLoop))));
+
         String edi = generator.generate(claim);
 
         assertThat(edi).contains("IEA*1*000000001~");
     }
 
     @Test
-    void generate_fullOutputContainsAllRequiredSegments() {
+    void generate_singleSubscriberSingleClaim_fullOutputContainsAllRequiredSegments() {
+        var subscriber = makeSubscriber("SMITH", "JOHN", "MEM987654321");
+        var claimLoop = makeClaimLoop("MEM987654321", new BigDecimal("250.00"));
+        var claim = buildClaim(List.of(new SubscriberGroup(subscriber, List.of(claimLoop))));
+
         String edi = generator.generate(claim);
 
         assertThat(edi).contains("ISA*");
@@ -150,5 +186,61 @@ class EDI837GeneratorTest {
         assertThat(edi).contains("SE*");
         assertThat(edi).contains("GE*");
         assertThat(edi).contains("IEA*");
+    }
+
+    @Test
+    void generate_singleSubscriberTwoClaims_producesTwoCLMSegments() {
+        var subscriber = makeSubscriber("SMITH", "JOHN", "MEM987654321");
+        var claim1 = makeClaimLoop("CLM001", new BigDecimal("150.00"));
+        var claim2 = makeClaimLoop("CLM002", new BigDecimal("100.00"));
+        var claim = buildClaim(List.of(new SubscriberGroup(subscriber, List.of(claim1, claim2))));
+
+        String edi = generator.generate(claim);
+
+        // Should have exactly one HL*2 (subscriber) and two CLM segments
+        assertThat(edi).contains("HL*2*1*22*0~");
+        assertThat(edi).contains("CLM*CLM001*");
+        assertThat(edi).contains("CLM*CLM002*");
+        // Only one SBR segment (single subscriber)
+        assertThat(countOccurrences(edi, "SBR*")).isEqualTo(1);
+        // Two CLM segments
+        assertThat(countOccurrences(edi, "CLM*")).isEqualTo(2);
+    }
+
+    @Test
+    void generate_twoSubscribersOneClaimEach_producesTwoHLSubscriberLoops() {
+        var subscriberA = makeSubscriber("SMITH", "JOHN", "MEMA");
+        var subscriberB = makeSubscriber("DOE", "JANE", "MEMB");
+        var claimA = makeClaimLoop("CLMA", new BigDecimal("150.00"));
+        var claimB = makeClaimLoop("CLMB", new BigDecimal("200.00"));
+        var claim = buildClaim(List.of(
+            new SubscriberGroup(subscriberA, List.of(claimA)),
+            new SubscriberGroup(subscriberB, List.of(claimB))
+        ));
+
+        String edi = generator.generate(claim);
+
+        // Two subscriber HL segments: HL*2 and HL*3
+        assertThat(edi).contains("HL*2*1*22*0~");
+        assertThat(edi).contains("HL*3*1*22*0~");
+        // Two SBR segments
+        assertThat(countOccurrences(edi, "SBR*")).isEqualTo(2);
+        // Two CLM segments
+        assertThat(countOccurrences(edi, "CLM*")).isEqualTo(2);
+        assertThat(edi).contains("CLM*CLMA*");
+        assertThat(edi).contains("CLM*CLMB*");
+        // Subscriber names present
+        assertThat(edi).contains("NM1*IL*1*SMITH*JOHN");
+        assertThat(edi).contains("NM1*IL*1*DOE*JANE");
+    }
+
+    private int countOccurrences(String text, String sub) {
+        int count = 0;
+        int idx = 0;
+        while ((idx = text.indexOf(sub, idx)) != -1) {
+            count++;
+            idx += sub.length();
+        }
+        return count;
     }
 }

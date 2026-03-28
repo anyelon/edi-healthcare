@@ -8,6 +8,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.List;
+
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -23,13 +25,13 @@ class ClaimsControllerTest {
 
     @Test
     void generateClaim_validRequest_returns200() throws Exception {
-        when(claimsService.generateClaim("ENC001"))
+        when(claimsService.generateClaim(List.of("ENC001")))
                 .thenReturn("ISA*00*...");
 
         mockMvc.perform(post("/api/claims/generate")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"encounterId": "ENC001"}
+                                {"encounterIds": ["ENC001"]}
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Disposition", "attachment; filename=837_claim.edi"))
@@ -37,7 +39,7 @@ class ClaimsControllerTest {
     }
 
     @Test
-    void generateClaim_missingEncounterId_returns400() throws Exception {
+    void generateClaim_missingEncounterIds_returns400() throws Exception {
         mockMvc.perform(post("/api/claims/generate")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -47,12 +49,13 @@ class ClaimsControllerTest {
     }
 
     @Test
-    void generateClaim_blankEncounterId_returns400() throws Exception {
+    void generateClaim_emptyEncounterIds_returns400() throws Exception {
         mockMvc.perform(post("/api/claims/generate")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"encounterId": ""}
+                                {"encounterIds": []}
                                 """))
                 .andExpect(status().isBadRequest());
     }
+
 }

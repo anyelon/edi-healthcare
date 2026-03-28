@@ -5,8 +5,9 @@ import com.example.edi.common.edi.loop.FunctionalGroup;
 import com.example.edi.common.edi.loop.InterchangeEnvelope;
 import com.example.edi.common.edi.loop.Receiver;
 import com.example.edi.common.edi.loop.Submitter;
-import com.example.edi.common.edi.loop.SubscriberLoop;
 import com.example.edi.common.edi.loop.TransactionHeader;
+
+import java.util.List;
 
 public record EDI837Claim(
     InterchangeEnvelope envelope,
@@ -15,6 +16,5 @@ public record EDI837Claim(
     Submitter submitter,
     Receiver receiver,
     BillingProviderLoop billingProvider,
-    SubscriberLoop subscriber,
-    ClaimLoop claim
+    List<SubscriberGroup> subscriberGroups
 ) {}

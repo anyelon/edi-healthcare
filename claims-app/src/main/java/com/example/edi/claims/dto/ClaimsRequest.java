@@ -1,8 +1,8 @@
 package com.example.edi.claims.dto;
 
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import java.util.List;
 
 public record ClaimsRequest(
-        @NotBlank String encounterId
-) {
-}
+        @NotEmpty List<String> encounterIds
+) {}

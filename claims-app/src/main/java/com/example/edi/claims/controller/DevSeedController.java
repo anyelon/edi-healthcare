@@ -130,8 +130,11 @@ public class DevSeedController {
         patient1.setLastName("SMITH");
         patient1.setGender("M");
         patient1.setDateOfBirth(LocalDate.of(1985, 7, 15));
+        patient1.setAddress("456 OAK AVENUE");
         patient1.setCity("ORLANDO");
         patient1.setState("FL");
+        patient1.setZipCode("32806");
+        patient1.setPhone("5553334444");
         patient1 = patientRepository.save(patient1);
 
         Patient patient2 = new Patient();
@@ -139,8 +142,11 @@ public class DevSeedController {
         patient2.setLastName("DOE");
         patient2.setGender("F");
         patient2.setDateOfBirth(LocalDate.of(1990, 3, 22));
+        patient2.setAddress("789 PINE STREET");
         patient2.setCity("ORLANDO");
         patient2.setState("FL");
+        patient2.setZipCode("32807");
+        patient2.setPhone("5555556666");
         patient2 = patientRepository.save(patient2);
 
         // Patient Insurance
@@ -151,6 +157,7 @@ public class DevSeedController {
         insurance1.setPolicyType("MC");
         insurance1.setEffectiveDate(LocalDate.of(2025, 1, 1));
         insurance1.setMemberId("MEM987654321");
+        insurance1.setGroupNumber("GRP100234");
         insurance1 = patientInsuranceRepository.save(insurance1);
 
         PatientInsurance insurance2 = new PatientInsurance();
@@ -160,6 +167,7 @@ public class DevSeedController {
         insurance2.setPolicyType("MC");
         insurance2.setEffectiveDate(LocalDate.of(2025, 1, 1));
         insurance2.setMemberId("MEM123456789");
+        insurance2.setGroupNumber("GRP100234");
         insurance2 = patientInsuranceRepository.save(insurance2);
 
         // Encounter 1
@@ -187,16 +195,22 @@ public class DevSeedController {
         proc1a.setEncounterId(encounter1.getId());
         proc1a.setLineNumber(1);
         proc1a.setProcedureCode("99213");
+        proc1a.setModifiers(List.of());
         proc1a.setChargeAmount(new BigDecimal("150.00"));
         proc1a.setUnits(1);
+        proc1a.setUnitType("UN");
+        proc1a.setDiagnosisPointers(List.of(1, 2));
         encounterProcedureRepository.save(proc1a);
 
         EncounterProcedure proc1b = new EncounterProcedure();
         proc1b.setEncounterId(encounter1.getId());
         proc1b.setLineNumber(2);
         proc1b.setProcedureCode("87880");
+        proc1b.setModifiers(List.of());
         proc1b.setChargeAmount(new BigDecimal("100.00"));
         proc1b.setUnits(1);
+        proc1b.setUnitType("UN");
+        proc1b.setDiagnosisPointers(List.of(1));
         encounterProcedureRepository.save(proc1b);
 
         // Encounter 2
@@ -221,14 +235,19 @@ public class DevSeedController {
         proc2a.setModifiers(List.of("25"));
         proc2a.setChargeAmount(new BigDecimal("200.00"));
         proc2a.setUnits(1);
+        proc2a.setUnitType("UN");
+        proc2a.setDiagnosisPointers(List.of(1));
         encounterProcedureRepository.save(proc2a);
 
         EncounterProcedure proc2b = new EncounterProcedure();
         proc2b.setEncounterId(encounter2.getId());
         proc2b.setLineNumber(2);
         proc2b.setProcedureCode("97140");
+        proc2b.setModifiers(List.of());
         proc2b.setChargeAmount(new BigDecimal("75.00"));
         proc2b.setUnits(2);
+        proc2b.setUnitType("UN");
+        proc2b.setDiagnosisPointers(List.of(1));
         encounterProcedureRepository.save(proc2b);
 
         // Build response

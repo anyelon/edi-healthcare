@@ -47,13 +47,13 @@ implementation 'io.xlate:staedi:1.25.3'
 ## Architecture
 
 ```
-POST /api/claims/generate {encounterId}
+POST /api/claims/generate {encounterIds: ["enc1", "enc2", ...]}
     │
     ▼
 ClaimsController
     │
     ▼
-ClaimsService (orchestrates DB lookups)
+ClaimsService (orchestrates DB lookups per encounter)
     │
     ├── Repositories: PatientRepository, PatientInsuranceRepository,
     │   EncounterRepository, EncounterDiagnosisRepository,
@@ -61,7 +61,7 @@ ClaimsService (orchestrates DB lookups)
     │   ProviderRepository, PayerRepository, FacilityRepository
     │
     ▼
-EDI837Mapper (DB entities → loop records)
+EDI837Mapper (DB entities → loop records, groups by subscriber)
     │
     ▼
 Loop Records (EDI837Claim) ← custom business validation runs here
@@ -72,6 +72,31 @@ EDI837Generator (loop records → StAEDI EDIStreamWriter → EDI string)
     ▼
 Response: downloadable .edi file
 ```
+
+### Multi-Encounter Claim Structure
+
+A single 837P file can contain multiple claims. The 837 hierarchy groups claims by subscriber under a billing provider:
+
+```
+ISA/GS/ST/BHT
+  Submitter (NM1*41, PER)
+  Receiver (NM1*40)
+  HL*1 Billing Provider (20)
+    NM1*85, N3, N4, REF*EI
+    HL*2 Subscriber A (22)
+      SBR, NM1*IL, N3, N4, DMG, NM1*PR
+      CLM (Encounter 1 for Subscriber A)
+        HI, LX/SV1/DTP...
+      CLM (Encounter 2 for Subscriber A)
+        HI, LX/SV1/DTP...
+    HL*3 Subscriber B (22)
+      SBR, NM1*IL, N3, N4, DMG, NM1*PR
+      CLM (Encounter 3 for Subscriber B)
+        HI, LX/SV1/DTP...
+SE/GE/IEA
+```
+
+The mapper groups encounters by subscriber (patient + insurance). Multiple encounters for the same subscriber share a single subscriber HL loop. Different subscribers get separate HL loops, each with their own claims underneath.
 
 ## Layer 1: Database Entities
 
@@ -354,8 +379,16 @@ public record EDI837Claim(
     Submitter submitter,
     Receiver receiver,
     BillingProviderLoop billingProvider,
+    List<SubscriberGroup> subscriberGroups
+) {}
+```
+
+#### SubscriberGroup → groups a subscriber with their claims
+
+```java
+public record SubscriberGroup(
     SubscriberLoop subscriber,
-    ClaimLoop claim
+    List<ClaimLoop> claims
 ) {}
 ```
 
@@ -401,21 +434,23 @@ public record ServiceLineLoop(
 
 Location: `com.example.edi.claims.service.EDI837Mapper`
 
-Responsibility: Convert DB entities into an `EDI837Claim` object.
+Responsibility: Convert a list of encounter data into a single `EDI837Claim` object, grouping encounters by subscriber.
 
 ```
-Input:  Practice, Provider, Patient, PatientInsurance, Payer,
-        Encounter, List<EncounterDiagnosis>, List<EncounterProcedure>,
-        Facility, InterchangeProperties (from YAML config)
+Input:  List of encounter data (each: Encounter + Patient + PatientInsurance + Payer +
+        EncounterDiagnosis list + EncounterProcedure list + Facility),
+        Practice, InterchangeProperties
 
-Output: EDI837Claim
+Output: EDI837Claim (with multiple SubscriberGroups)
 ```
 
 Key mapping logic:
 - Generates control numbers (ISA13, GS06, ST02)
+- Groups encounters by subscriber key (patientId + insuranceMemberId) into `SubscriberGroup` records
+- Each `SubscriberGroup` has one `SubscriberLoop` and a list of `ClaimLoop` (one per encounter)
 - Maps `Patient.gender` to EDI gender code (M/F/U)
 - Formats dates to YYYYMMDD / YYMMDD
-- Calculates `ClaimLoop.totalCharge` by summing `EncounterProcedure.chargeAmount`
+- Calculates `ClaimLoop.totalCharge` per encounter by summing `EncounterProcedure.chargeAmount`
 - Maps `EncounterDiagnosis.rank` to `DiagnosisEntry`
 - Maps `EncounterProcedure` to `ServiceLineLoop`
 
@@ -441,21 +476,22 @@ Key logic:
 
 Location: `com.example.edi.claims.service.ClaimsService`
 
-Responsibility: Orchestrate the full claim generation flow.
+Responsibility: Orchestrate the full claim generation flow for one or more encounters.
 
 ```
-Input:  encounterId
-Flow:   1. Look up Encounter by ID
-        2. Look up Patient from encounter.patientId
-        3. Look up active PatientInsurance for patient
-        4. Look up Payer from PatientInsurance.payerId
-        5. Look up EncounterDiagnosis records by encounterId
-        6. Look up EncounterProcedure records by encounterId
-        7. Look up Practice from encounter.practiceId
-        8. Look up Provider from encounter.providerId
-        9. Look up Facility from encounter.facilityId
-       10. Call EDI837Mapper to build EDI837Claim
-       11. Call EDI837Generator to produce EDI string
+Input:  List<String> encounterIds
+Flow:   For each encounterId:
+          1. Look up Encounter by ID
+          2. Look up Patient from encounter.patientId
+          3. Look up active PatientInsurance for patient
+          4. Look up Payer from PatientInsurance.payerId
+          5. Look up EncounterDiagnosis records by encounterId
+          6. Look up EncounterProcedure records by encounterId
+          7. Look up Facility from encounter.facilityId
+        Then:
+          8. Look up Practice (from first encounter's practiceId — all encounters must share the same practice)
+          9. Call EDI837Mapper to build EDI837Claim (mapper groups by subscriber)
+         10. Call EDI837Generator to produce EDI string
 Output: EDI string (returned as downloadable .edi file)
 ```
 
@@ -517,22 +553,26 @@ All tests written before implementation. Testcontainers for MongoDB in integrati
 #### Unit Tests
 
 **EDI837GeneratorTest**
-- Given a hand-built `EDI837Claim`, verify:
+- Given a hand-built `EDI837Claim` with multiple subscriber groups, verify:
   - ISA segment has correct fixed-width padding
   - GS segment has correct version reference (005010X222A1)
   - ST/SE segment count matches
   - HI segment uses ABK for primary, ABF for secondary diagnoses
   - SV1 composite elements are correctly formatted
   - IEA control number matches ISA
+  - Multiple CLM segments present for multi-encounter claim
+  - Multiple HL*22 subscriber loops when encounters span different patients
   - Full output matches expected EDI string for a known claim
 
 **EDI837MapperTest**
 - Given mock DB entities, verify:
   - Practice maps to BillingProviderLoop fields
   - Patient + PatientInsurance + Payer map to SubscriberLoop
+  - Multiple encounters for same patient grouped into one SubscriberGroup
+  - Different patients produce separate SubscriberGroups
   - EncounterDiagnosis list maps to ClaimLoop.diagnoses with correct ranks
   - EncounterProcedure list maps to ClaimLoop.serviceLines
-  - Total charge is calculated correctly
+  - Total charge is calculated correctly per claim
   - Date formatting is correct (YYYYMMDD, YYMMDD)
   - Gender mapping works (M→M, F→F, null→U)
 
@@ -540,9 +580,11 @@ All tests written before implementation. Testcontainers for MongoDB in integrati
 
 **ClaimsGenerationIT**
 - Seed MongoDB with test data via repositories
-- POST `/api/claims/generate` with `{patientId, dateOfService}`
+- POST `/api/claims/generate` with `{encounterIds: ["enc1"]}` — single encounter
+- POST `/api/claims/generate` with `{encounterIds: ["enc1", "enc2"]}` — multi-encounter, multi-subscriber
 - Verify response is a downloadable `.edi` file
 - Parse the response and verify key segments (ISA, ST, CLM, HI, SV1, SE, IEA)
+- Verify multiple CLM segments in multi-encounter output
 
 **DevSeedControllerIT**
 - POST `/api/dev/seed`
@@ -594,6 +636,7 @@ testImplementation 'org.testcontainers:junit-jupiter'
 ### claims-app — 837-specific loop records and services
 - `claims-app/src/main/java/com/example/edi/claims/config/InterchangeProperties.java`
 - `claims-app/src/main/java/com/example/edi/claims/domain/loop/EDI837Claim.java`
+- `claims-app/src/main/java/com/example/edi/claims/domain/loop/SubscriberGroup.java`
 - `claims-app/src/main/java/com/example/edi/claims/domain/loop/ClaimLoop.java`
 - `claims-app/src/main/java/com/example/edi/claims/domain/loop/DiagnosisEntry.java`
 - `claims-app/src/main/java/com/example/edi/claims/domain/loop/ServiceLineLoop.java`
@@ -630,5 +673,7 @@ testImplementation 'org.testcontainers:junit-jupiter'
 2. Start MongoDB via `docker-compose up -d`
 3. `./gradlew :claims-app:bootRun`
 4. `curl -X POST http://localhost:8080/api/dev/seed` — returns JSON summary
-5. `curl -X POST http://localhost:8080/api/claims/generate -H "Content-Type: application/json" -d '{"encounterId":"<id>"}'` — returns downloadable .edi file
-6. Validate the .edi output contains correct ISA, GS, ST, CLM, HI, SV1, SE, GE, IEA segments
+5. `curl -X POST http://localhost:8080/api/claims/generate -H "Content-Type: application/json" -d '{"encounterIds":["<id1>"]}'` — single encounter claim
+6. `curl -X POST http://localhost:8080/api/claims/generate -H "Content-Type: application/json" -d '{"encounterIds":["<id1>","<id2>"]}'` — multi-encounter claim with grouped subscribers
+7. Validate the .edi output contains correct ISA, GS, ST, CLM, HI, SV1, SE, GE, IEA segments
+8. Multi-encounter output should have multiple CLM segments and appropriate HL subscriber grouping

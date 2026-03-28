@@ -25,7 +25,7 @@ public class ClaimsController {
 
     @PostMapping("/generate")
     public ResponseEntity<byte[]> generateClaim(@Valid @RequestBody ClaimsRequest request) {
-        String ediContent = claimsService.generateClaim(request.encounterId());
+        String ediContent = claimsService.generateClaim(request.encounterIds());
         byte[] bytes = ediContent.getBytes(StandardCharsets.UTF_8);
 
         return ResponseEntity.ok()
