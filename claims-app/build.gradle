@@ -6,6 +6,7 @@ plugins {
 dependencies {
     implementation project(':common')
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'io.xlate:staedi:1.25.3'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.2'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
