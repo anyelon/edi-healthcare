@@ -16,3 +16,17 @@ dependencies {
     testImplementation 'org.testcontainers:testcontainers-junit-jupiter:2.0.4'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
+
+tasks.withType(Test).configureEach {
+    def dockerHost = System.getenv('DOCKER_HOST')
+    if (dockerHost == null) {
+        // Detect Rancher Desktop socket as fallback when /var/run/docker.sock is absent
+        def rdSocket = file("${System.getenv('HOME')}/.rd/docker.sock")
+        if (rdSocket.exists()) {
+            environment 'DOCKER_HOST', "unix://${rdSocket.absolutePath}"
+            environment 'TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE', rdSocket.absolutePath
+            // Rancher Desktop does not support Ryuk's privileged bind-mount; disable it
+            environment 'TESTCONTAINERS_RYUK_DISABLED', 'true'
+        }
+    }
+}
