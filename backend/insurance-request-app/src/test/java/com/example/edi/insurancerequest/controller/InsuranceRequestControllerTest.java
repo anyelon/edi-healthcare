@@ -1,5 +1,6 @@
 package com.example.edi.insurancerequest.controller;
 
+import com.example.edi.common.exception.PatientNotFoundException;
 import com.example.edi.insurancerequest.service.InsuranceRequestService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -77,5 +78,21 @@ class InsuranceRequestControllerTest {
                                 {"patientIds": [""]}
                                 """))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void requestEligibility_patientNotFound_returns404() throws Exception {
+        when(insuranceRequestService.generateEligibilityInquiry(List.of("P999")))
+                .thenThrow(new PatientNotFoundException("P999"));
+
+        mockMvc.perform(post("/api/insurance/eligibility-request")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"patientIds": ["P999"]}
+                                """))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("NOT_FOUND"))
+                .andExpect(jsonPath("$.entityType").value("Patient"))
+                .andExpect(jsonPath("$.entityId").value("P999"));
     }
 }

@@ -193,7 +193,7 @@ class EligibilityInquiryIT {
     }
 
     @Test
-    void eligibilityRequest_unknownPatient_returns500() {
+    void eligibilityRequest_unknownPatient_returns404() {
         Map<String, Object> requestBody = Map.of("patientIds", List.of("NONEXISTENT"));
 
         ResponseEntity<String> response = restTemplate.postForEntity(
@@ -202,7 +202,7 @@ class EligibilityInquiryIT {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     @Test
