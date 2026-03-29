@@ -7,17 +7,17 @@ COPY gradle/ gradle/
 COPY gradlew settings.gradle build.gradle ./
 
 # Copy module build files
-COPY common/build.gradle common/build.gradle
-COPY claims-app/build.gradle claims-app/build.gradle
-COPY insurance-request-app/build.gradle insurance-request-app/build.gradle
-COPY insurance-response-app/build.gradle insurance-response-app/build.gradle
+COPY backend/common/build.gradle backend/common/build.gradle
+COPY backend/claims-app/build.gradle backend/claims-app/build.gradle
+COPY backend/insurance-request-app/build.gradle backend/insurance-request-app/build.gradle
+COPY backend/insurance-response-app/build.gradle backend/insurance-response-app/build.gradle
 
 # Download dependencies (cached unless build files change)
 RUN ./gradlew dependencies --no-daemon || true
 
 # Copy source code
-COPY common/src common/src
-COPY claims-app/src claims-app/src
+COPY backend/common/src backend/common/src
+COPY backend/claims-app/src backend/claims-app/src
 
 # Build the boot JAR
 RUN ./gradlew :claims-app:bootJar --no-daemon -x test
@@ -30,7 +30,7 @@ WORKDIR /app
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 USER appuser
 
-COPY --from=build /workspace/claims-app/build/libs/*.jar app.jar
+COPY --from=build /workspace/backend/claims-app/build/libs/*.jar app.jar
 
 EXPOSE 8080
 

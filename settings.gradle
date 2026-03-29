@@ -4,3 +4,8 @@ include 'common'
 include 'claims-app'
 include 'insurance-request-app'
 include 'insurance-response-app'
+
+project(':common').projectDir = file('backend/common')
+project(':claims-app').projectDir = file('backend/claims-app')
+project(':insurance-request-app').projectDir = file('backend/insurance-request-app')
+project(':insurance-response-app').projectDir = file('backend/insurance-response-app')

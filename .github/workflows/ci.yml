@@ -74,6 +74,25 @@ jobs:
           retention-days: 7
 
   # ------------------------------------------------------------------
+  # Job 1b: Build and lint frontend
+  # ------------------------------------------------------------------
+  test-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  # ------------------------------------------------------------------
   # Job 2: Detect which apps changed
   # ------------------------------------------------------------------
   detect-changes:
@@ -107,16 +126,16 @@ jobs:
           APPS=()
 
           # Check if shared files changed (triggers all apps)
-          if echo "$CHANGED_FILES" | grep -qE '^(common/|build\.gradle|settings\.gradle|gradle/|gradle\.properties|\.github/workflows/)'; then
+          if echo "$CHANGED_FILES" | grep -qE '^(backend/common/|build\.gradle|settings\.gradle|gradle/|gradle\.properties|\.github/workflows/)'; then
             APPS=("claims-app" "insurance-request-app" "insurance-response-app")
           else
-            if echo "$CHANGED_FILES" | grep -q '^claims-app/'; then
+            if echo "$CHANGED_FILES" | grep -q '^backend/claims-app/'; then
               APPS+=("claims-app")
             fi
-            if echo "$CHANGED_FILES" | grep -q '^insurance-request-app/'; then
+            if echo "$CHANGED_FILES" | grep -q '^backend/insurance-request-app/'; then
               APPS+=("insurance-request-app")
             fi
-            if echo "$CHANGED_FILES" | grep -q '^insurance-response-app/'; then
+            if echo "$CHANGED_FILES" | grep -q '^backend/insurance-response-app/'; then
               APPS+=("insurance-response-app")
             fi
           fi
@@ -168,7 +187,7 @@ jobs:
       - name: Build Docker image
         run: |
           docker build \
-            -f ${{ matrix.app }}/Dockerfile \
+            -f backend/${{ matrix.app }}/Dockerfile \
             -t ${{ steps.tag.outputs.sha_tag }} \
             .
 

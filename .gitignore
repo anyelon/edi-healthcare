@@ -35,3 +35,10 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Frontend (Next.js) ###
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env*.local
+!frontend/.env.example
