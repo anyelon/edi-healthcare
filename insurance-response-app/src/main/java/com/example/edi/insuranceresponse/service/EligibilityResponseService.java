@@ -31,8 +31,9 @@ public class EligibilityResponseService {
 
     public EligibilityResponse processFile(MultipartFile file) throws Exception {
         String filename = System.currentTimeMillis() + "_" + file.getOriginalFilename();
-        Files.createDirectories(Paths.get(archiveProperties.path()));
-        var archivePath = Paths.get(archiveProperties.path(), filename);
+        var archiveDir = Paths.get(archiveProperties.path()).toAbsolutePath();
+        Files.createDirectories(archiveDir);
+        var archivePath = archiveDir.resolve(filename);
         file.transferTo(archivePath.toFile());
 
         try {
