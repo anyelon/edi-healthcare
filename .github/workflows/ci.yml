@@ -3,6 +3,8 @@ name: CI/CD
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
     inputs:
       app:
@@ -13,6 +15,7 @@ on:
           - claims-app
           - insurance-request-app
           - insurance-response-app
+          - frontend
           - all
       environment:
         description: 'Target environment'
@@ -74,6 +77,25 @@ jobs:
           retention-days: 7
 
   # ------------------------------------------------------------------
+  # Job 1b: Build and lint frontend
+  # ------------------------------------------------------------------
+  test-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  # ------------------------------------------------------------------
   # Job 2: Detect which apps changed
   # ------------------------------------------------------------------
   detect-changes:
@@ -92,7 +114,7 @@ jobs:
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             APP="${{ github.event.inputs.app }}"
             if [[ "$APP" == "all" ]]; then
-              echo 'apps=["claims-app","insurance-request-app","insurance-response-app"]' >> "$GITHUB_OUTPUT"
+              echo 'apps=["claims-app","insurance-request-app","insurance-response-app","frontend"]' >> "$GITHUB_OUTPUT"
             else
               echo "apps=[\"$APP\"]" >> "$GITHUB_OUTPUT"
             fi
@@ -106,19 +128,24 @@ jobs:
 
           APPS=()
 
-          # Check if shared files changed (triggers all apps)
-          if echo "$CHANGED_FILES" | grep -qE '^(common/|build\.gradle|settings\.gradle|gradle/|gradle\.properties|\.github/workflows/)'; then
+          # Check if shared files changed (triggers all backend apps)
+          if echo "$CHANGED_FILES" | grep -qE '^(backend/common/|build\.gradle|settings\.gradle|gradle/|gradle\.properties|\.github/workflows/)'; then
             APPS=("claims-app" "insurance-request-app" "insurance-response-app")
           else
-            if echo "$CHANGED_FILES" | grep -q '^claims-app/'; then
+            if echo "$CHANGED_FILES" | grep -q '^backend/claims-app/'; then
               APPS+=("claims-app")
             fi
-            if echo "$CHANGED_FILES" | grep -q '^insurance-request-app/'; then
+            if echo "$CHANGED_FILES" | grep -q '^backend/insurance-request-app/'; then
               APPS+=("insurance-request-app")
             fi
-            if echo "$CHANGED_FILES" | grep -q '^insurance-response-app/'; then
+            if echo "$CHANGED_FILES" | grep -q '^backend/insurance-response-app/'; then
               APPS+=("insurance-response-app")
             fi
+          fi
+
+          # Check if frontend changed
+          if echo "$CHANGED_FILES" | grep -q '^frontend/'; then
+            APPS+=("frontend")
           fi
 
           if [[ ${#APPS[@]} -eq 0 ]]; then
@@ -134,8 +161,8 @@ jobs:
   # Job 3: Build and push Docker images
   # ------------------------------------------------------------------
   build-and-push:
-    needs: [test, detect-changes]
-    if: needs.detect-changes.outputs.has_changes == 'true'
+    needs: [test, test-frontend, detect-changes]
+    if: github.event_name != 'pull_request' && needs.detect-changes.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -165,12 +192,21 @@ jobs:
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
           echo "sha_tag=$IMAGE:${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
-      - name: Build Docker image
+      - name: Build backend Docker image
+        if: matrix.app != 'frontend'
         run: |
           docker build \
-            -f ${{ matrix.app }}/Dockerfile \
+            -f backend/${{ matrix.app }}/Dockerfile \
             -t ${{ steps.tag.outputs.sha_tag }} \
             .
+
+      - name: Build frontend Docker image
+        if: matrix.app == 'frontend'
+        run: |
+          docker build \
+            -f frontend/Dockerfile \
+            -t ${{ steps.tag.outputs.sha_tag }} \
+            frontend/
 
       - name: Push Docker image
         run: |
@@ -207,7 +243,8 @@ jobs:
             "$IMAGE:${{ github.sha }}" \
             "$IMAGE:latest-dev"
 
-      - name: Deploy to Cloud Run (dev)
+      - name: Deploy backend to Cloud Run (dev)
+        if: matrix.app != 'frontend'
         run: |
           IMAGE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_DEV }}/${{ env.GAR_REPOSITORY }}/${{ matrix.app }}"
           gcloud run deploy ${{ matrix.app }}-dev \
@@ -221,6 +258,23 @@ jobs:
             --cpu 1 \
             --min-instances 0 \
             --max-instances 3 \
+            --allow-unauthenticated
+
+      - name: Deploy frontend to Cloud Run (dev)
+        if: matrix.app == 'frontend'
+        run: |
+          IMAGE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_DEV }}/${{ env.GAR_REPOSITORY }}/frontend"
+          gcloud run deploy frontend-dev \
+            --image "$IMAGE:${{ github.sha }}" \
+            --region ${{ env.GCP_REGION }} \
+            --project ${{ env.GCP_PROJECT_DEV }} \
+            --platform managed \
+            --set-secrets "CLAIMS_API_URL=claims-api-url-dev:latest,REQUEST_API_URL=request-api-url-dev:latest,RESPONSE_API_URL=response-api-url-dev:latest" \
+            --memory 256Mi \
+            --cpu 1 \
+            --min-instances 0 \
+            --max-instances 3 \
+            --port 3000 \
             --allow-unauthenticated
 
   # ------------------------------------------------------------------
@@ -254,7 +308,8 @@ jobs:
             "$IMAGE:${{ github.sha }}" \
             "$IMAGE:latest-prod"
 
-      - name: Deploy to Cloud Run (prod)
+      - name: Deploy backend to Cloud Run (prod)
+        if: matrix.app != 'frontend'
         run: |
           IMAGE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_DEV }}/${{ env.GAR_REPOSITORY }}/${{ matrix.app }}"
           gcloud run deploy ${{ matrix.app }}-prod \
@@ -268,4 +323,21 @@ jobs:
             --cpu 1 \
             --min-instances 0 \
             --max-instances 3 \
+            --allow-unauthenticated
+
+      - name: Deploy frontend to Cloud Run (prod)
+        if: matrix.app == 'frontend'
+        run: |
+          IMAGE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_DEV }}/${{ env.GAR_REPOSITORY }}/frontend"
+          gcloud run deploy frontend-prod \
+            --image "$IMAGE:${{ github.sha }}" \
+            --region ${{ env.GCP_REGION }} \
+            --project ${{ env.GCP_PROJECT_PROD }} \
+            --platform managed \
+            --set-secrets "CLAIMS_API_URL=claims-api-url-prod:latest,REQUEST_API_URL=request-api-url-prod:latest,RESPONSE_API_URL=response-api-url-prod:latest" \
+            --memory 256Mi \
+            --cpu 1 \
+            --min-instances 0 \
+            --max-instances 3 \
+            --port 3000 \
             --allow-unauthenticated

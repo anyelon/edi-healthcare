@@ -1,6 +1,7 @@
 # Build outputs
 build/
 */build/
+backend/*/build/
 .gradle/
 
 # IDE
@@ -26,6 +27,10 @@ docs/
 
 # Claude
 .claude/
+
+# Frontend
+frontend/node_modules/
+frontend/.next/
 
 # Docker
 docker-compose.yml

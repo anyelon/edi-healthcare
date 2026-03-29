@@ -10,5 +10,15 @@ services:
     volumes:
       - mongo-data:/data/db
 
+  frontend:
+    build: ./frontend
+    container_name: edi-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - CLAIMS_API_URL=http://host.docker.internal:8080
+      - REQUEST_API_URL=http://host.docker.internal:8081
+      - RESPONSE_API_URL=http://host.docker.internal:8082
+
 volumes:
   mongo-data:
