@@ -7,8 +7,24 @@ dependencies {
     implementation project(':common')
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.2'
+    implementation 'io.xlate:staedi:1.25.3'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'org.testcontainers:testcontainers-mongodb:2.0.4'
+    testImplementation 'org.testcontainers:testcontainers-junit-jupiter:2.0.4'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.withType(Test).configureEach {
+    def dockerHost = System.getenv('DOCKER_HOST')
+    if (dockerHost == null) {
+        def rdSocket = file("${System.getenv('HOME')}/.rd/docker.sock")
+        if (rdSocket.exists()) {
+            environment 'DOCKER_HOST', "unix://${rdSocket.absolutePath}"
+            environment 'TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE', rdSocket.absolutePath
+            environment 'TESTCONTAINERS_RYUK_DISABLED', 'true'
+        }
+    }
 }
