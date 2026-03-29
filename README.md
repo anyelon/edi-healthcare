@@ -94,6 +94,12 @@ cd frontend && npm run dev                 # port 3000
 
 Open http://localhost:3000 to access the dashboard. Use the "Seed Database" button to populate test data.
 
+### Dev Environment
+
+The dev environment is deployed to Google Cloud Run:
+
+- **Frontend**: https://frontend-dev-1053092970650.us-central1.run.app/
+
 ## Frontend
 
 The Next.js frontend provides a UI for all three EDI workflows:
