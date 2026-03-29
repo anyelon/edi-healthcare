@@ -1,18 +1,30 @@
 "use client";
 
 import { useState } from "react";
-import { generateEligibilityRequest, downloadBlob } from "@/lib/api-client";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { EdiPreview } from "@/components/edi-preview";
+import { generateEligibilityRequest } from "@/lib/api-client";
 
 export default function EligibilityRequestPage() {
   const [patientIds, setPatientIds] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setError(null);
     setPreview(null);
 
     const ids = patientIds
@@ -21,7 +33,7 @@ export default function EligibilityRequestPage() {
       .filter(Boolean);
 
     if (ids.length === 0) {
-      setError("Please enter at least one patient ID.");
+      toast.error("Please enter at least one patient ID.");
       setLoading(false);
       return;
     }
@@ -30,12 +42,9 @@ export default function EligibilityRequestPage() {
       const blob = await generateEligibilityRequest(ids);
       const text = await blob.text();
       setPreview(text);
-      downloadBlob(
-        new Blob([text], { type: "text/plain" }),
-        "270_inquiry.edi"
-      );
+      toast.success("EDI 270 eligibility request generated successfully.");
     } catch (err) {
-      setError(
+      toast.error(
         err instanceof Error ? err.message : "Failed to generate request"
       );
     } finally {
@@ -45,50 +54,59 @@ export default function EligibilityRequestPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-2">
-        Eligibility Request (270)
-      </h1>
-      <p className="text-gray-600 mb-8">
-        Generate EDI 270 eligibility inquiry files for patient insurance
-        verification.
-      </p>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-bold tracking-tight">
+          Eligibility Request
+        </h1>
+        <Badge variant="outline">EDI 270</Badge>
+      </div>
 
-      <form onSubmit={handleSubmit} className="max-w-xl">
-        <label
-          htmlFor="patientIds"
-          className="block text-sm font-medium text-gray-700 mb-1"
-        >
-          Patient IDs
-        </label>
-        <textarea
-          id="patientIds"
-          value={patientIds}
-          onChange={(e) => setPatientIds(e.target.value)}
-          placeholder="Enter patient IDs, separated by commas or newlines"
-          rows={4}
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          className="mt-4 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {loading ? "Generating..." : "Generate 270 Request"}
-        </button>
-      </form>
+      <div className="max-w-2xl space-y-6">
+        <Card>
+          <form onSubmit={handleSubmit}>
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold">
+                Generate EDI 270 Inquiry
+              </CardTitle>
+              <CardDescription>
+                Enter patient IDs to generate an eligibility inquiry file
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Label htmlFor="patientIds">Patient IDs</Label>
+                <Textarea
+                  id="patientIds"
+                  value={patientIds}
+                  onChange={(e) => setPatientIds(e.target.value)}
+                  placeholder="Enter patient IDs, one per line or comma-separated..."
+                  rows={4}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter one or more patient IDs, separated by commas or newlines
+                </p>
+              </div>
+            </CardContent>
+            <CardFooter className="gap-2">
+              <Button type="submit" disabled={loading}>
+                {loading ? "Generating..." : "Generate Request"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setPatientIds("");
+                  setPreview(null);
+                }}
+              >
+                Clear
+              </Button>
+            </CardFooter>
+          </form>
+        </Card>
 
-      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
-
-      {preview && (
-        <div className="mt-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">
-            EDI 270 Preview
-          </h2>
-          <pre className="rounded-md bg-gray-50 border border-gray-200 p-4 text-xs font-mono overflow-x-auto whitespace-pre-wrap max-h-96">
-            {preview}
-          </pre>
-        </div>
-      )}
+        {preview && <EdiPreview content={preview} filename="270_inquiry.edi" />}
+      </div>
     </div>
   );
 }
