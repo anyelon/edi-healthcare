@@ -1,6 +1,7 @@
 package com.example.edi.insuranceresponse.controller;
 
 import com.example.edi.common.document.EligibilityResponse;
+import com.example.edi.common.exception.EdiParseException;
 import com.example.edi.insuranceresponse.service.EligibilityResponseService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,5 +43,19 @@ class InsuranceResponseControllerTest {
     void processEligibilityResponse_noFile_returns400() throws Exception {
         mockMvc.perform(multipart("/api/insurance/eligibility-response"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void processEligibilityResponse_parseError_returns400() throws Exception {
+        when(eligibilityResponseService.processFile(any()))
+                .thenThrow(new EdiParseException("Failed to parse EDI 271 file", null));
+
+        MockMultipartFile file = new MockMultipartFile("file", "bad_271.edi",
+                "text/plain", "INVALID EDI".getBytes());
+
+        mockMvc.perform(multipart("/api/insurance/eligibility-response").file(file))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.message").value("Failed to parse EDI 271 file"));
     }
 }

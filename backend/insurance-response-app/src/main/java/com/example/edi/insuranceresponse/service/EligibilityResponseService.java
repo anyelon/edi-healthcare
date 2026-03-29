@@ -36,17 +36,8 @@ public class EligibilityResponseService {
         var archivePath = archiveDir.resolve(filename);
         file.transferTo(archivePath.toFile());
 
-        try {
-            EDI271Response parsed = edi271Parser.parse(archivePath);
-            EligibilityResponse result = edi271Mapper.map(parsed, archivePath.toString(), LocalDateTime.now());
-            return eligibilityResponseRepository.save(result);
-        } catch (Exception e) {
-            EligibilityResponse errorResponse = new EligibilityResponse();
-            errorResponse.setStatus("ERROR");
-            errorResponse.setErrorMessage(e.getMessage());
-            errorResponse.setFilePath(archivePath.toString());
-            errorResponse.setReceivedAt(LocalDateTime.now());
-            return eligibilityResponseRepository.save(errorResponse);
-        }
+        EDI271Response parsed = edi271Parser.parse(archivePath);
+        EligibilityResponse result = edi271Mapper.map(parsed, archivePath.toString(), LocalDateTime.now());
+        return eligibilityResponseRepository.save(result);
     }
 }

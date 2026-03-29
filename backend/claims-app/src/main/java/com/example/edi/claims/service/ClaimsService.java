@@ -4,6 +4,7 @@ import com.example.edi.claims.config.InterchangeProperties;
 import com.example.edi.claims.domain.loop.EDI837Claim;
 import com.example.edi.claims.dto.EncounterBundle;
 import com.example.edi.common.document.*;
+import com.example.edi.common.exception.*;
 import com.example.edi.common.repository.*;
 import org.springframework.stereotype.Service;
 
@@ -58,18 +59,17 @@ public class ClaimsService {
 
         for (String encounterId : encounterIds) {
             Encounter encounter = encounterRepository.findById(encounterId)
-                    .orElseThrow(() -> new RuntimeException("Encounter not found: " + encounterId));
+                    .orElseThrow(() -> new EncounterNotFoundException(encounterId));
 
             Patient patient = patientRepository.findById(encounter.getPatientId())
-                    .orElseThrow(() -> new RuntimeException("Patient not found: " + encounter.getPatientId()));
+                    .orElseThrow(() -> new PatientNotFoundException(encounter.getPatientId()));
 
             PatientInsurance insurance = patientInsuranceRepository
                     .findByPatientIdAndTerminationDateIsNull(encounter.getPatientId())
-                    .orElseThrow(() -> new RuntimeException(
-                            "Active insurance not found for patient: " + encounter.getPatientId()));
+                    .orElseThrow(() -> new InsuranceNotFoundException(encounter.getPatientId()));
 
             Payer payer = payerRepository.findById(insurance.getPayerId())
-                    .orElseThrow(() -> new RuntimeException("Payer not found: " + insurance.getPayerId()));
+                    .orElseThrow(() -> new PayerNotFoundException(insurance.getPayerId()));
 
             List<EncounterDiagnosis> diagnoses =
                     encounterDiagnosisRepository.findByEncounterIdOrderByRankAsc(encounterId);
@@ -79,11 +79,11 @@ public class ClaimsService {
 
             if (practice == null) {
                 practice = practiceRepository.findById(encounter.getPracticeId())
-                        .orElseThrow(() -> new RuntimeException("Practice not found: " + encounter.getPracticeId()));
+                        .orElseThrow(() -> new PracticeNotFoundException(encounter.getPracticeId()));
             }
 
             Facility facility = facilityRepository.findById(encounter.getFacilityId())
-                    .orElseThrow(() -> new RuntimeException("Facility not found: " + encounter.getFacilityId()));
+                    .orElseThrow(() -> new FacilityNotFoundException(encounter.getFacilityId()));
 
             bundles.add(new EncounterBundle(patient, insurance, payer, encounter, diagnoses, procedures, facility));
         }

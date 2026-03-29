@@ -1,14 +1,13 @@
 package com.example.edi.insuranceresponse.service;
 
 import com.example.edi.common.document.EligibilityResponse;
+import com.example.edi.common.exception.EdiParseException;
 import com.example.edi.common.repository.EligibilityResponseRepository;
 import com.example.edi.insuranceresponse.config.ArchiveProperties;
 import com.example.edi.insuranceresponse.domain.loop.EDI271Response;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
-import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
@@ -17,6 +16,7 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -71,17 +71,11 @@ class EligibilityResponseServiceTest {
     }
 
     @Test
-    void processFile_parseFailure_savesErrorDocument() throws Exception {
+    void processFile_parseFailure_throwsEdiParseException() throws Exception {
         when(archiveProperties.path()).thenReturn(tempDir.toString());
 
         when(edi271Parser.parse(any(Path.class)))
-                .thenThrow(new RuntimeException("Parse failed"));
-
-        ArgumentCaptor<EligibilityResponse> captor = ArgumentCaptor.forClass(EligibilityResponse.class);
-        EligibilityResponse errorResponse = new EligibilityResponse();
-        errorResponse.setStatus("ERROR");
-        errorResponse.setErrorMessage("Parse failed");
-        when(eligibilityResponseRepository.save(captor.capture())).thenReturn(errorResponse);
+                .thenThrow(new EdiParseException("Parse failed", null));
 
         MockMultipartFile file = new MockMultipartFile("file", "bad_271.edi",
                 "text/plain", "INVALID EDI".getBytes());
@@ -89,13 +83,10 @@ class EligibilityResponseServiceTest {
         EligibilityResponseService service = new EligibilityResponseService(
                 edi271Parser, edi271Mapper, eligibilityResponseRepository, archiveProperties);
 
-        EligibilityResponse result = service.processFile(file);
+        assertThatThrownBy(() -> service.processFile(file))
+                .isInstanceOf(EdiParseException.class)
+                .hasMessageContaining("Parse failed");
 
-        verify(eligibilityResponseRepository).save(any(EligibilityResponse.class));
-        EligibilityResponse captured = captor.getValue();
-        assertThat(captured.getStatus()).isEqualTo("ERROR");
-        assertThat(captured.getErrorMessage()).isEqualTo("Parse failed");
-        assertThat(captured.getFilePath()).isNotNull();
-        assertThat(captured.getReceivedAt()).isNotNull();
+        verify(eligibilityResponseRepository, never()).save(any());
     }
 }

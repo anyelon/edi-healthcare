@@ -1,6 +1,7 @@
 package com.example.edi.claims.controller;
 
 import com.example.edi.claims.service.ClaimsService;
+import com.example.edi.common.exception.EncounterNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -56,6 +57,22 @@ class ClaimsControllerTest {
                                 {"encounterIds": []}
                                 """))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void generateClaim_encounterNotFound_returns404() throws Exception {
+        when(claimsService.generateClaim(List.of("ENC001")))
+                .thenThrow(new EncounterNotFoundException("ENC001"));
+
+        mockMvc.perform(post("/api/claims/generate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"encounterIds": ["ENC001"]}
+                                """))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("NOT_FOUND"))
+                .andExpect(jsonPath("$.entityType").value("Encounter"))
+                .andExpect(jsonPath("$.entityId").value("ENC001"));
     }
 
 }
