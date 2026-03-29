@@ -172,6 +172,15 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --quiet > /dev/null
 echo "  roles/secretmanager.secretAccessor granted to $COMPUTE_SA"
 
+# Firestore/Datastore User for Cloud Run runtime SA (required for OIDC auth to Firestore MongoDB)
+echo "  Granting roles/datastore.user to Cloud Run runtime SA..."
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+    --member="serviceAccount:$COMPUTE_SA" \
+    --role="roles/datastore.user" \
+    --condition=None \
+    --quiet > /dev/null
+echo "  roles/datastore.user granted to $COMPUTE_SA"
+
 echo "All IAM roles assigned"
 echo ""
 
