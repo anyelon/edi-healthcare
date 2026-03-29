@@ -737,7 +737,7 @@ These are one-time setup steps performed in the GCP Console or via `gcloud` CLI.
 4. **Create secrets:** `gcloud secrets create mongodb-uri-dev --data-file=-` (pipe the Atlas connection string)
 5. **Set up Workload Identity Federation:**
    - Create a workload identity pool: `gcloud iam workload-identity-pools create github-pool --location=global`
-   - Create a provider: `gcloud iam workload-identity-pools providers create-oidc github-provider --location=global --workload-identity-pool=github-pool --issuer-uri=https://token.actions.githubusercontent.com --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository"`
+   - Create a provider: `gcloud iam workload-identity-pools providers create-oidc github-provider --location=global --workload-identity-pool=github-pool --issuer-uri=https://token.actions.githubusercontent.com --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" --attribute-condition="assertion.repository.startsWith(\"https://github.com/\")"`
    - Grant the service account permission to be impersonated by the GitHub repo
 6. **Set GitHub repository variables** (Settings → Secrets and variables → Actions → Variables):
    - `GCP_PROJECT_DEV` — dev GCP project ID
