@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { GenerationLayout } from "@/components/generation-layout";
 import { DataTable, type ColumnDef } from "@/components/ui/data-table";
 import { fetchEncounters, generateClaim } from "@/lib/api-client";
@@ -47,13 +48,16 @@ export default function ClaimsPage() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [preview, setPreview] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchEncounters()
       .then(setEncounters)
-      .catch((err) =>
-        toast.error(err instanceof Error ? err.message : "Failed to fetch encounters")
-      )
+      .catch((err) => {
+        const message = err instanceof Error ? err.message : "Failed to fetch encounters";
+        setError(message);
+        toast.error(message);
+      })
       .finally(() => setFetching(false));
   }, []);
 
@@ -71,14 +75,6 @@ export default function ClaimsPage() {
     }
   }
 
-  if (fetching) {
-    return (
-      <div className="flex h-64 items-center justify-center text-muted-foreground">
-        Loading encounters...
-      </div>
-    );
-  }
-
   return (
     <GenerationLayout
       title="Claims Generation"
@@ -93,13 +89,27 @@ export default function ClaimsPage() {
       previewFilename="837_claim.edi"
       onClosePreview={() => setPreview(null)}
     >
-      <DataTable
-        columns={columns}
-        data={encounters}
-        selectedIds={selectedIds}
-        onSelectionChange={setSelectedIds}
-        getId={(e) => e.id}
-      />
+      {fetching ? (
+        <div className="flex h-64 items-center justify-center text-muted-foreground">
+          Loading encounters...
+        </div>
+      ) : error ? (
+        <div className="flex h-64 flex-col items-center justify-center gap-3 text-muted-foreground">
+          <p>{error}</p>
+          <Button variant="outline" onClick={() => { setError(null); setFetching(true); fetchEncounters().then(setEncounters).catch((err) => setError(err instanceof Error ? err.message : "Failed to fetch encounters")).finally(() => setFetching(false)); }}>
+            Retry
+          </Button>
+        </div>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={encounters}
+          selectedIds={selectedIds}
+          onSelectionChange={setSelectedIds}
+          getId={(e) => e.id}
+          emptyMessage="No encounters found. Try seeding the database from the sidebar."
+        />
+      )}
     </GenerationLayout>
   );
 }

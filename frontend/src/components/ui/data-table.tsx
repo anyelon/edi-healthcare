@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import {
   Table,
   TableBody,
@@ -22,6 +23,7 @@ interface DataTableProps<T> {
   selectedIds: Set<string>;
   onSelectionChange: (ids: Set<string>) => void;
   getId: (row: T) => string;
+  emptyMessage?: React.ReactNode;
 }
 
 export function DataTable<T>({
@@ -30,6 +32,7 @@ export function DataTable<T>({
   selectedIds,
   onSelectionChange,
   getId,
+  emptyMessage = "No data available.",
 }: DataTableProps<T>) {
   const allSelected = data.length > 0 && data.every((row) => selectedIds.has(getId(row)));
   const someSelected = data.some((row) => selectedIds.has(getId(row)));
@@ -83,7 +86,7 @@ export function DataTable<T>({
           {data.length === 0 ? (
             <TableRow>
               <TableCell colSpan={columns.length + 1} className="h-24 text-center text-muted-foreground">
-                No data available.
+                {emptyMessage}
               </TableCell>
             </TableRow>
           ) : (

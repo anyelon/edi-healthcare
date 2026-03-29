@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { GenerationLayout } from "@/components/generation-layout";
 import { DataTable, type ColumnDef } from "@/components/ui/data-table";
 import { fetchPatients, generateEligibilityRequest } from "@/lib/api-client";
@@ -28,13 +29,16 @@ export default function EligibilityRequestPage() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [preview, setPreview] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPatients()
       .then(setPatients)
-      .catch((err) =>
-        toast.error(err instanceof Error ? err.message : "Failed to fetch patients")
-      )
+      .catch((err) => {
+        const message = err instanceof Error ? err.message : "Failed to fetch patients";
+        setError(message);
+        toast.error(message);
+      })
       .finally(() => setFetching(false));
   }, []);
 
@@ -54,14 +58,6 @@ export default function EligibilityRequestPage() {
     }
   }
 
-  if (fetching) {
-    return (
-      <div className="flex h-64 items-center justify-center text-muted-foreground">
-        Loading patients...
-      </div>
-    );
-  }
-
   return (
     <GenerationLayout
       title="Eligibility Request"
@@ -76,13 +72,27 @@ export default function EligibilityRequestPage() {
       previewFilename="270_inquiry.edi"
       onClosePreview={() => setPreview(null)}
     >
-      <DataTable
-        columns={columns}
-        data={patients}
-        selectedIds={selectedIds}
-        onSelectionChange={setSelectedIds}
-        getId={(p) => p.id}
-      />
+      {fetching ? (
+        <div className="flex h-64 items-center justify-center text-muted-foreground">
+          Loading patients...
+        </div>
+      ) : error ? (
+        <div className="flex h-64 flex-col items-center justify-center gap-3 text-muted-foreground">
+          <p>{error}</p>
+          <Button variant="outline" onClick={() => { setError(null); setFetching(true); fetchPatients().then(setPatients).catch((err) => setError(err instanceof Error ? err.message : "Failed to fetch patients")).finally(() => setFetching(false)); }}>
+            Retry
+          </Button>
+        </div>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={patients}
+          selectedIds={selectedIds}
+          onSelectionChange={setSelectedIds}
+          getId={(p) => p.id}
+          emptyMessage="No patients found. Try seeding the database from the sidebar."
+        />
+      )}
     </GenerationLayout>
   );
 }
