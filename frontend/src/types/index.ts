@@ -44,3 +44,42 @@ export interface SeedResult {
   insuranceIds: string[];
   encounterIds: string[];
 }
+
+export interface DiagnosisResponse {
+  diagnosisCode: string;
+  rank: number;
+}
+
+export interface ProcedureResponse {
+  procedureCode: string;
+  modifiers: string[];
+  chargeAmount: number;
+  units: number;
+}
+
+export interface EncounterResponse {
+  id: string;
+  patientId: string;
+  patientName: string;
+  providerId: string;
+  providerName: string;
+  facilityId: string;
+  facilityName: string;
+  dateOfService: string;
+  authorizationNumber: string;
+  diagnoses: DiagnosisResponse[];
+  procedures: ProcedureResponse[];
+}
+
+export interface PatientResponse {
+  id: string;
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+  gender: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  phone: string;
+}
