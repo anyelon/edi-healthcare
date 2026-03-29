@@ -25,14 +25,13 @@ public class InsuranceRequestController {
 
     @PostMapping("/eligibility-request")
     public ResponseEntity<byte[]> requestEligibility(@Valid @RequestBody InsuranceRequestDTO request) {
-        String ediContent = insuranceRequestService.generateEligibilityInquiry(request.patientId());
-
-        byte[] fileContent = ediContent.getBytes(StandardCharsets.UTF_8);
+        String ediContent = insuranceRequestService.generateEligibilityInquiry(request.patientIds());
+        byte[] bytes = ediContent.getBytes(StandardCharsets.UTF_8);
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=270_inquiry.edi")
                 .contentType(MediaType.TEXT_PLAIN)
-                .contentLength(fileContent.length)
-                .body(fileContent);
+                .contentLength(bytes.length)
+                .body(bytes);
     }
 }

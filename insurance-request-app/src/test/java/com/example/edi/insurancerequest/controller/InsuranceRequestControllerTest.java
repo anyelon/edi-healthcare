@@ -8,6 +8,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.List;
+
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -23,13 +25,13 @@ class InsuranceRequestControllerTest {
 
     @Test
     void requestEligibility_validRequest_returns200() throws Exception {
-        when(insuranceRequestService.generateEligibilityInquiry("P001"))
+        when(insuranceRequestService.generateEligibilityInquiry(List.of("P001")))
                 .thenReturn("ISA*00*...");
 
         mockMvc.perform(post("/api/insurance/eligibility-request")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"patientId": "P001"}
+                                {"patientIds": ["P001"]}
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Disposition", "attachment; filename=270_inquiry.edi"))
@@ -37,7 +39,30 @@ class InsuranceRequestControllerTest {
     }
 
     @Test
-    void requestEligibility_missingPatientId_returns400() throws Exception {
+    void requestEligibility_multiplePatients_returns200() throws Exception {
+        when(insuranceRequestService.generateEligibilityInquiry(List.of("P001", "P002")))
+                .thenReturn("ISA*00*...");
+
+        mockMvc.perform(post("/api/insurance/eligibility-request")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"patientIds": ["P001", "P002"]}
+                                """))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void requestEligibility_emptyList_returns400() throws Exception {
+        mockMvc.perform(post("/api/insurance/eligibility-request")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"patientIds": []}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void requestEligibility_missingBody_returns400() throws Exception {
         mockMvc.perform(post("/api/insurance/eligibility-request")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
@@ -45,11 +70,11 @@ class InsuranceRequestControllerTest {
     }
 
     @Test
-    void requestEligibility_emptyPatientId_returns400() throws Exception {
+    void requestEligibility_blankPatientId_returns400() throws Exception {
         mockMvc.perform(post("/api/insurance/eligibility-request")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"patientId": ""}
+                                {"patientIds": [""]}
                                 """))
                 .andExpect(status().isBadRequest());
     }
