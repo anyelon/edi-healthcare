@@ -21,9 +21,15 @@ DEV_PROJECT_ID="edi-healthcare-dev"
 if [[ "$ENV" == "dev" ]]; then
   PROJECT_ID="edi-healthcare-dev"
   SECRET_NAME="mongodb-uri-dev"
+  CLAIMS_API_URL="https://claims-app-dev-1053092970650.us-central1.run.app"
+  REQUEST_API_URL="https://insurance-request-app-dev-1053092970650.us-central1.run.app"
+  RESPONSE_API_URL="https://insurance-response-app-dev-1053092970650.us-central1.run.app"
 else
   PROJECT_ID="edi-healthcare-prod"
   SECRET_NAME="mongodb-uri-prod"
+  CLAIMS_API_URL="https://claims-app-prod-PLACEHOLDER.us-central1.run.app"
+  REQUEST_API_URL="https://insurance-request-app-prod-PLACEHOLDER.us-central1.run.app"
+  RESPONSE_API_URL="https://insurance-response-app-prod-PLACEHOLDER.us-central1.run.app"
 fi
 
 echo ""
@@ -182,26 +188,30 @@ gcloud iam service-accounts add-iam-policy-binding "$SA_EMAIL" \
 echo "Workload Identity bound: GitHub repo $ORGANIZATION/$REPO -> $SA_EMAIL"
 echo ""
 
-# === Step 6: Create Firestore MongoDB database ===
-echo "=== Step 6: Creating Firestore MongoDB database ==="
-if gcloud firestore databases describe --database="$DATABASE_ID" --project="$PROJECT_ID" > /dev/null 2>&1; then
-  echo "Firestore database '$DATABASE_ID' already exists, skipping creation"
-else
-  gcloud firestore databases create \
-      --project="$PROJECT_ID" \
-      --location="$REGION" \
-      --type=firestore-native \
-      --database="$DATABASE_ID"
-  echo "Firestore database '$DATABASE_ID' created"
-fi
-echo ""
+# === Step 6: Store MongoDB URI in Secret Manager ===
+# PREREQUISITE: The Firestore database must be created manually via the GCP Console
+# with MongoDB compatibility enabled BEFORE running this script.
+#   1. Go to: https://console.cloud.google.com/firestore/databases
+#   2. Create a database with "Firestore with MongoDB compatibility" mode
+#   3. Copy the MongoDB URI from the database details page
+#
+# The MongoDB URI will look like:
+#   mongodb://<UID>.<REGION>.firestore.goog:443/<DB_NAME>?loadBalanced=true&tls=true&retryWrites=false&authMechanism=MONGODB-OIDC&authMechanismProperties=ENVIRONMENT:gcp,TOKEN_RESOURCE:FIRESTORE
+echo "=== Step 6: Storing MongoDB URI in Secret Manager ==="
 
-# === Step 7: Store MongoDB URI in Secret Manager ===
-echo "=== Step 7: Storing MongoDB URI in Secret Manager ==="
-DATABASE_UID=$(gcloud firestore databases describe --database="$DATABASE_ID" --project="$PROJECT_ID" --format='value(uid)')
-ENCODED_DB_ID=$(printf '%s' "$DATABASE_ID" | python3 -c "import sys, urllib.parse; print(urllib.parse.quote(sys.stdin.read()))")
-MONGODB_URI="mongodb://${DATABASE_UID}.${REGION}.firestore.google.com:27017/${ENCODED_DB_ID}?authMechanism=MONGODB-AWS&authSource=%24external"
-echo "Constructed MongoDB URI for database UID: $DATABASE_UID"
+if [[ -z "${MONGODB_URI:-}" ]]; then
+  echo "ERROR: MONGODB_URI environment variable is not set."
+  echo ""
+  echo "You must create the Firestore database manually in the GCP Console"
+  echo "with MongoDB compatibility enabled, then pass the MongoDB URI:"
+  echo ""
+  echo "  MONGODB_URI='mongodb://...' ./scripts/setup_gcloud_project.sh $ENV"
+  echo ""
+  echo "To find the URI: GCP Console > Firestore > Select your database > Connection string"
+  exit 1
+fi
+
+echo "Using provided MongoDB URI"
 
 if gcloud secrets describe "$SECRET_NAME" --project="$PROJECT_ID" > /dev/null 2>&1; then
   echo "Secret '$SECRET_NAME' already exists, adding new version..."
@@ -215,6 +225,27 @@ fi
 echo -n "$MONGODB_URI" | \
 gcloud secrets versions add "$SECRET_NAME" --data-file=- --project="$PROJECT_ID"
 echo "MongoDB URI stored as latest version of secret '$SECRET_NAME'"
+echo ""
+
+# === Step 7: Store frontend API URL secrets ===
+echo "=== Step 8: Storing frontend API URL secrets ==="
+
+create_or_update_secret() {
+  local name="$1"
+  local value="$2"
+  if gcloud secrets describe "$name" --project="$PROJECT_ID" > /dev/null 2>&1; then
+    echo "Secret '$name' already exists, adding new version..."
+  else
+    gcloud secrets create "$name" --replication-policy="automatic" --project="$PROJECT_ID"
+    echo "Secret '$name' created"
+  fi
+  printf "%s" "$value" | gcloud secrets versions add "$name" --data-file=- --project="$PROJECT_ID"
+  echo "Stored '$name' = $value"
+}
+
+create_or_update_secret "claims-api-url-$ENV" "$CLAIMS_API_URL"
+create_or_update_secret "request-api-url-$ENV" "$REQUEST_API_URL"
+create_or_update_secret "response-api-url-$ENV" "$RESPONSE_API_URL"
 echo ""
 
 # === Summary ===
