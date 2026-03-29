@@ -36,9 +36,13 @@ export function AppSidebar() {
   async function handleSeed() {
     try {
       const result = await seedDatabase();
-      toast.success(
-        `Database seeded: ${result.patientIds.length} patients, ${result.encounterIds.length} encounters`
-      );
+      if (result.patientIds) {
+        toast.success(
+          `Database seeded: ${result.patientIds.length} patients, ${result.encounterIds.length} encounters`
+        );
+      } else {
+        toast.info("Database already seeded.");
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Seed failed");
     }
