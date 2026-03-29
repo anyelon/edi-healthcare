@@ -1,0 +1,32 @@
+# Build outputs
+build/
+*/build/
+.gradle/
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.classpath
+.project
+out/
+
+# Documentation and specs
+specs/
+docs/
+*.md
+!README.md
+
+# Git
+.git/
+.gitignore
+
+# Claude
+.claude/
+
+# Docker
+docker-compose.yml
+*/Dockerfile

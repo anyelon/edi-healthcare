@@ -1,0 +1,271 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      app:
+        description: 'App to deploy'
+        required: true
+        type: choice
+        options:
+          - claims-app
+          - insurance-request-app
+          - insurance-response-app
+          - all
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - prod
+
+env:
+  GCP_REGION: us-central1
+  GAR_REPOSITORY: edi-healthcare
+  GCP_PROJECT_DEV: ${{ vars.GCP_PROJECT_DEV }}
+  GCP_PROJECT_PROD: ${{ vars.GCP_PROJECT_PROD }}
+  WIF_PROVIDER: ${{ vars.WIF_PROVIDER }}
+  WIF_SERVICE_ACCOUNT: ${{ vars.WIF_SERVICE_ACCOUNT }}
+
+jobs:
+  # ------------------------------------------------------------------
+  # Job 1: Run all tests
+  # ------------------------------------------------------------------
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Start MongoDB
+        run: docker compose up -d
+
+      - name: Wait for MongoDB
+        run: |
+          for i in $(seq 1 30); do
+            if docker compose exec -T mongodb mongosh --eval "db.runCommand('ping')" > /dev/null 2>&1; then
+              echo "MongoDB is ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "MongoDB failed to start"
+          exit 1
+
+      - name: Run tests
+        run: ./gradlew test
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: '**/build/reports/tests/'
+          retention-days: 7
+
+  # ------------------------------------------------------------------
+  # Job 2: Detect which apps changed
+  # ------------------------------------------------------------------
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      apps: ${{ steps.set-matrix.outputs.apps }}
+      has_changes: ${{ steps.set-matrix.outputs.has_changes }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Determine affected apps
+        id: set-matrix
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            APP="${{ github.event.inputs.app }}"
+            if [[ "$APP" == "all" ]]; then
+              echo 'apps=["claims-app","insurance-request-app","insurance-response-app"]' >> "$GITHUB_OUTPUT"
+            else
+              echo "apps=[\"$APP\"]" >> "$GITHUB_OUTPUT"
+            fi
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          APPS=()
+
+          # Check if shared files changed (triggers all apps)
+          if echo "$CHANGED_FILES" | grep -qE '^(common/|build\.gradle|settings\.gradle|gradle/|gradle\.properties|\.github/workflows/)'; then
+            APPS=("claims-app" "insurance-request-app" "insurance-response-app")
+          else
+            if echo "$CHANGED_FILES" | grep -q '^claims-app/'; then
+              APPS+=("claims-app")
+            fi
+            if echo "$CHANGED_FILES" | grep -q '^insurance-request-app/'; then
+              APPS+=("insurance-request-app")
+            fi
+            if echo "$CHANGED_FILES" | grep -q '^insurance-response-app/'; then
+              APPS+=("insurance-response-app")
+            fi
+          fi
+
+          if [[ ${#APPS[@]} -eq 0 ]]; then
+            echo 'apps=[]' >> "$GITHUB_OUTPUT"
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          else
+            JSON=$(printf '%s\n' "${APPS[@]}" | jq -R . | jq -sc .)
+            echo "apps=$JSON" >> "$GITHUB_OUTPUT"
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  # ------------------------------------------------------------------
+  # Job 3: Build and push Docker images
+  # ------------------------------------------------------------------
+  build-and-push:
+    needs: [test, detect-changes]
+    if: needs.detect-changes.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: ${{ fromJson(needs.detect-changes.outputs.apps) }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
+
+      - name: Determine image tag
+        id: tag
+        run: |
+          IMAGE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_DEV }}/${{ env.GAR_REPOSITORY }}/${{ matrix.app }}"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+          echo "sha_tag=$IMAGE:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            -f ${{ matrix.app }}/Dockerfile \
+            -t ${{ steps.tag.outputs.sha_tag }} \
+            .
+
+      - name: Push Docker image
+        run: |
+          docker push ${{ steps.tag.outputs.sha_tag }}
+
+  # ------------------------------------------------------------------
+  # Job 4: Deploy to dev (auto on push to main)
+  # ------------------------------------------------------------------
+  deploy-dev:
+    needs: [build-and-push, detect-changes]
+    if: github.event_name == 'push' && needs.detect-changes.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    environment: dev
+    strategy:
+      matrix:
+        app: ${{ fromJson(needs.detect-changes.outputs.apps) }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Tag image for dev
+        run: |
+          IMAGE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_DEV }}/${{ env.GAR_REPOSITORY }}/${{ matrix.app }}"
+          gcloud artifacts docker tags add \
+            "$IMAGE:${{ github.sha }}" \
+            "$IMAGE:latest-dev"
+
+      - name: Deploy to Cloud Run (dev)
+        run: |
+          IMAGE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_DEV }}/${{ env.GAR_REPOSITORY }}/${{ matrix.app }}"
+          gcloud run deploy ${{ matrix.app }}-dev \
+            --image "$IMAGE:${{ github.sha }}" \
+            --region ${{ env.GCP_REGION }} \
+            --project ${{ env.GCP_PROJECT_DEV }} \
+            --platform managed \
+            --set-env-vars "SPRING_PROFILES_ACTIVE=cloud" \
+            --set-secrets "MONGODB_URI=mongodb-uri-dev:latest" \
+            --memory 512Mi \
+            --cpu 1 \
+            --min-instances 0 \
+            --max-instances 3 \
+            --allow-unauthenticated
+
+  # ------------------------------------------------------------------
+  # Job 5: Deploy to prod (manual via workflow_dispatch)
+  # ------------------------------------------------------------------
+  deploy-prod:
+    needs: [build-and-push, detect-changes]
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: prod
+    strategy:
+      matrix:
+        app: ${{ fromJson(needs.detect-changes.outputs.apps) }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Tag image for prod
+        run: |
+          IMAGE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_DEV }}/${{ env.GAR_REPOSITORY }}/${{ matrix.app }}"
+          gcloud artifacts docker tags add \
+            "$IMAGE:${{ github.sha }}" \
+            "$IMAGE:latest-prod"
+
+      - name: Deploy to Cloud Run (prod)
+        run: |
+          IMAGE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_DEV }}/${{ env.GAR_REPOSITORY }}/${{ matrix.app }}"
+          gcloud run deploy ${{ matrix.app }}-prod \
+            --image "$IMAGE:${{ github.sha }}" \
+            --region ${{ env.GCP_REGION }} \
+            --project ${{ env.GCP_PROJECT_PROD }} \
+            --platform managed \
+            --set-env-vars "SPRING_PROFILES_ACTIVE=cloud" \
+            --set-secrets "MONGODB_URI=mongodb-uri-prod:latest" \
+            --memory 512Mi \
+            --cpu 1 \
+            --min-instances 0 \
+            --max-instances 3 \
+            --allow-unauthenticated
