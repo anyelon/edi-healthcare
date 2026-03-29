@@ -1,18 +1,30 @@
 "use client";
 
 import { useState } from "react";
-import { generateClaim, downloadBlob } from "@/lib/api-client";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { EdiPreview } from "@/components/edi-preview";
+import { generateClaim } from "@/lib/api-client";
 
 export default function ClaimsPage() {
   const [encounterIds, setEncounterIds] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setError(null);
     setPreview(null);
 
     const ids = encounterIds
@@ -21,7 +33,7 @@ export default function ClaimsPage() {
       .filter(Boolean);
 
     if (ids.length === 0) {
-      setError("Please enter at least one encounter ID.");
+      toast.error("Please enter at least one encounter ID.");
       setLoading(false);
       return;
     }
@@ -30,9 +42,9 @@ export default function ClaimsPage() {
       const blob = await generateClaim(ids);
       const text = await blob.text();
       setPreview(text);
-      downloadBlob(new Blob([text], { type: "text/plain" }), "837_claim.edi");
+      toast.success("EDI 837 claim generated successfully.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to generate claim");
+      toast.error(err instanceof Error ? err.message : "Failed to generate claim");
     } finally {
       setLoading(false);
     }
@@ -40,49 +52,57 @@ export default function ClaimsPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-2">
-        Claims Generation (837)
-      </h1>
-      <p className="text-gray-600 mb-8">
-        Generate EDI 837P professional claim files from patient encounters.
-      </p>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-bold tracking-tight">Claims Generation</h1>
+        <Badge variant="outline">EDI 837P</Badge>
+      </div>
 
-      <form onSubmit={handleSubmit} className="max-w-xl">
-        <label
-          htmlFor="encounterIds"
-          className="block text-sm font-medium text-gray-700 mb-1"
-        >
-          Encounter IDs
-        </label>
-        <textarea
-          id="encounterIds"
-          value={encounterIds}
-          onChange={(e) => setEncounterIds(e.target.value)}
-          placeholder="Enter encounter IDs, separated by commas or newlines"
-          rows={4}
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          className="mt-4 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {loading ? "Generating..." : "Generate 837 Claim"}
-        </button>
-      </form>
+      <div className="max-w-2xl space-y-6">
+        <Card>
+          <form onSubmit={handleSubmit}>
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold">
+                Generate EDI 837P Claims
+              </CardTitle>
+              <CardDescription>
+                Enter encounter IDs to generate a professional claims file
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Label htmlFor="encounterIds">Encounter IDs</Label>
+                <Textarea
+                  id="encounterIds"
+                  value={encounterIds}
+                  onChange={(e) => setEncounterIds(e.target.value)}
+                  placeholder="Enter encounter IDs, one per line or comma-separated..."
+                  rows={4}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter one or more encounter IDs, separated by commas or newlines
+                </p>
+              </div>
+            </CardContent>
+            <CardFooter className="gap-2">
+              <Button type="submit" disabled={loading}>
+                {loading ? "Generating..." : "Generate Claims"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setEncounterIds("");
+                  setPreview(null);
+                }}
+              >
+                Clear
+              </Button>
+            </CardFooter>
+          </form>
+        </Card>
 
-      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
-
-      {preview && (
-        <div className="mt-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">
-            EDI 837 Preview
-          </h2>
-          <pre className="rounded-md bg-gray-50 border border-gray-200 p-4 text-xs font-mono overflow-x-auto whitespace-pre-wrap max-h-96">
-            {preview}
-          </pre>
-        </div>
-      )}
+        {preview && <EdiPreview content={preview} filename="837_claim.edi" />}
+      </div>
     </div>
   );
 }

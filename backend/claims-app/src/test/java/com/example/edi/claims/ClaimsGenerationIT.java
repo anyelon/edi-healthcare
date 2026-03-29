@@ -267,7 +267,7 @@ class ClaimsGenerationIT {
     }
 
     @Test
-    void generateClaim_unknownEncounter_returns500() {
+    void generateClaim_unknownEncounter_returns404() {
         Map<String, Object> requestBody = Map.of("encounterIds", List.of("NONEXISTENT"));
 
         ResponseEntity<String> response = restTemplate.postForEntity(
@@ -276,7 +276,7 @@ class ClaimsGenerationIT {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     private int countOccurrences(String text, String sub) {

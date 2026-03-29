@@ -6,6 +6,10 @@ import com.example.edi.common.document.Patient;
 import com.example.edi.common.document.PatientInsurance;
 import com.example.edi.common.document.Payer;
 import com.example.edi.common.document.Practice;
+import com.example.edi.common.exception.InsuranceNotFoundException;
+import com.example.edi.common.exception.PatientNotFoundException;
+import com.example.edi.common.exception.PayerNotFoundException;
+import com.example.edi.common.exception.PracticeNotFoundException;
 import com.example.edi.common.repository.PatientInsuranceRepository;
 import com.example.edi.common.repository.PatientRepository;
 import com.example.edi.common.repository.PayerRepository;
@@ -45,21 +49,20 @@ public class InsuranceRequestService {
     public String generateEligibilityInquiry(List<String> patientIds) {
         Practice practice = practiceRepository.findAll().stream()
                 .findFirst()
-                .orElseThrow(() -> new RuntimeException("No practice found in the system"));
+                .orElseThrow(() -> new PracticeNotFoundException("default"));
 
         List<EligibilityBundle> bundles = new ArrayList<>();
 
         for (String patientId : patientIds) {
             Patient patient = patientRepository.findById(patientId)
-                    .orElseThrow(() -> new RuntimeException("Patient not found: " + patientId));
+                    .orElseThrow(() -> new PatientNotFoundException(patientId));
 
             PatientInsurance insurance = patientInsuranceRepository
                     .findByPatientIdAndTerminationDateIsNull(patientId)
-                    .orElseThrow(() -> new RuntimeException(
-                            "Active insurance not found for patient: " + patientId));
+                    .orElseThrow(() -> new InsuranceNotFoundException(patientId));
 
             Payer payer = payerRepository.findById(insurance.getPayerId())
-                    .orElseThrow(() -> new RuntimeException("Payer not found: " + insurance.getPayerId()));
+                    .orElseThrow(() -> new PayerNotFoundException(insurance.getPayerId()));
 
             bundles.add(new EligibilityBundle(patient, insurance, payer));
         }

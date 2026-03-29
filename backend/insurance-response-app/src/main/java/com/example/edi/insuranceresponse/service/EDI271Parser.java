@@ -1,5 +1,6 @@
 package com.example.edi.insuranceresponse.service;
 
+import com.example.edi.common.exception.EdiParseException;
 import com.example.edi.common.edi.loop.FunctionalGroup;
 import com.example.edi.common.edi.loop.InterchangeEnvelope;
 import com.example.edi.common.edi.loop.TransactionHeader;
@@ -258,10 +259,10 @@ public class EDI271Parser {
 
             return new EDI271Response(envelope, functionalGroup, transactionHeader, subscriberInfo, payerInfo, benefits);
 
-        } catch (RuntimeException e) {
+        } catch (EdiParseException e) {
             throw e;
         } catch (Exception e) {
-            throw new RuntimeException("Failed to parse EDI 271 file: " + filePath, e);
+            throw new EdiParseException("Failed to parse EDI 271 file: " + filePath, e);
         }
     }
 

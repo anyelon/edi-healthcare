@@ -4,6 +4,9 @@ import com.example.edi.claims.config.InterchangeProperties;
 import com.example.edi.claims.domain.loop.EDI837Claim;
 import com.example.edi.claims.dto.EncounterBundle;
 import com.example.edi.common.document.*;
+import com.example.edi.common.exception.EncounterNotFoundException;
+import com.example.edi.common.exception.InsuranceNotFoundException;
+import com.example.edi.common.exception.PatientNotFoundException;
 import com.example.edi.common.repository.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -83,24 +86,24 @@ class ClaimsServiceTest {
     }
 
     @Test
-    void generateClaim_encounterNotFound_throwsException() {
+    void generateClaim_encounterNotFound_throwsEncounterNotFoundException() {
         when(encounterRepository.findById(anyString())).thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class, () -> claimsService.generateClaim(List.of("ENC001")));
+        assertThrows(EncounterNotFoundException.class, () -> claimsService.generateClaim(List.of("ENC001")));
     }
 
     @Test
-    void generateClaim_patientNotFound_throwsException() {
+    void generateClaim_patientNotFound_throwsPatientNotFoundException() {
         Encounter encounter = new Encounter();
         encounter.setPatientId("P001");
         when(encounterRepository.findById(anyString())).thenReturn(Optional.of(encounter));
         when(patientRepository.findById(anyString())).thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class, () -> claimsService.generateClaim(List.of("ENC001")));
+        assertThrows(PatientNotFoundException.class, () -> claimsService.generateClaim(List.of("ENC001")));
     }
 
     @Test
-    void generateClaim_activeInsuranceNotFound_throwsException() {
+    void generateClaim_activeInsuranceNotFound_throwsInsuranceNotFoundException() {
         Encounter encounter = new Encounter();
         encounter.setPatientId("P001");
         Patient patient = new Patient();
@@ -108,6 +111,6 @@ class ClaimsServiceTest {
         when(patientRepository.findById(anyString())).thenReturn(Optional.of(patient));
         when(patientInsuranceRepository.findByPatientIdAndTerminationDateIsNull(anyString())).thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class, () -> claimsService.generateClaim(List.of("ENC001")));
+        assertThrows(InsuranceNotFoundException.class, () -> claimsService.generateClaim(List.of("ENC001")));
     }
 }

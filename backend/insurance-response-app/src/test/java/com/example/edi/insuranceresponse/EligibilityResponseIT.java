@@ -120,23 +120,23 @@ class EligibilityResponseIT {
     }
 
     @Test
-    void uploadMalformedFile_returnsErrorResponse() throws Exception {
+    void uploadMalformedFile_returns400() throws Exception {
         Path tempFile = tempDir.resolve("malformed_271.edi");
         Files.writeString(tempFile, "NOT AN EDI FILE");
 
         ResponseEntity<String> response = postFile(tempFile.toFile());
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
 
         String body = response.getBody();
         assertThat(body).isNotNull();
 
         JsonNode json = objectMapper.readTree(body);
-        assertThat(json.get("status").asText()).isEqualTo("ERROR");
-        assertThat(json.has("errorMessage")).isTrue();
-        assertThat(json.get("errorMessage").asText()).isNotBlank();
+        assertThat(json.get("error").asText()).isEqualTo("BAD_REQUEST");
+        assertThat(json.has("message")).isTrue();
+        assertThat(json.get("message").asText()).isNotBlank();
 
-        assertThat(eligibilityResponseRepository.count()).isEqualTo(1);
+        assertThat(eligibilityResponseRepository.count()).isEqualTo(0);
     }
 
     @Test

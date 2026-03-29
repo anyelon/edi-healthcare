@@ -7,6 +7,9 @@ import com.example.edi.common.document.Patient;
 import com.example.edi.common.document.PatientInsurance;
 import com.example.edi.common.document.Payer;
 import com.example.edi.common.document.Practice;
+import com.example.edi.common.exception.InsuranceNotFoundException;
+import com.example.edi.common.exception.PatientNotFoundException;
+import com.example.edi.common.exception.PracticeNotFoundException;
 import com.example.edi.common.repository.PatientInsuranceRepository;
 import com.example.edi.common.repository.PatientRepository;
 import com.example.edi.common.repository.PayerRepository;
@@ -82,17 +85,17 @@ class InsuranceRequestServiceTest {
     }
 
     @Test
-    void generateEligibilityInquiry_patientNotFound_throwsException() {
+    void generateEligibilityInquiry_patientNotFound_throwsPatientNotFoundException() {
         when(practiceRepository.findAll()).thenReturn(List.of(new Practice()));
         when(patientRepository.findById("P999")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.generateEligibilityInquiry(List.of("P999")))
-                .isInstanceOf(RuntimeException.class)
+                .isInstanceOf(PatientNotFoundException.class)
                 .hasMessageContaining("Patient not found");
     }
 
     @Test
-    void generateEligibilityInquiry_noActiveInsurance_throwsException() {
+    void generateEligibilityInquiry_noActiveInsurance_throwsInsuranceNotFoundException() {
         Patient patient = new Patient();
         patient.setId("P001");
 
@@ -102,16 +105,16 @@ class InsuranceRequestServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.generateEligibilityInquiry(List.of("P001")))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Active insurance not found");
+                .isInstanceOf(InsuranceNotFoundException.class)
+                .hasMessageContaining("Insurance not found");
     }
 
     @Test
-    void generateEligibilityInquiry_noPractice_throwsException() {
+    void generateEligibilityInquiry_noPractice_throwsPracticeNotFoundException() {
         when(practiceRepository.findAll()).thenReturn(List.of());
 
         assertThatThrownBy(() -> service.generateEligibilityInquiry(List.of("P001")))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("No practice found");
+                .isInstanceOf(PracticeNotFoundException.class)
+                .hasMessageContaining("Practice not found");
     }
 }
