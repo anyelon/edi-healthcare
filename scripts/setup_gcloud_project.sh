@@ -91,7 +91,7 @@ else
       --workload-identity-pool=github-pool \
       --issuer-uri=https://token.actions.githubusercontent.com \
       --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" \
-      --attribute-condition="assertion.repository == \"$ORGANIZATION/$REPO\""
+      --attribute-condition="assertion.repository == '$ORGANIZATION/$REPO'"
   echo "WIF provider 'github-provider' created"
 fi
 echo ""
@@ -120,14 +120,14 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --quiet > /dev/null
 echo "  roles/run.admin granted"
 
-# Artifact Registry Writer: push Docker images (registry lives in dev project)
-echo "  Granting roles/artifactregistry.writer on $DEV_PROJECT_ID..."
+# Artifact Registry Repo Admin: push images and update tags (e.g. latest-dev)
+echo "  Granting roles/artifactregistry.repoAdmin on $DEV_PROJECT_ID..."
 gcloud projects add-iam-policy-binding "$DEV_PROJECT_ID" \
     --member="serviceAccount:$SA_EMAIL" \
-    --role="roles/artifactregistry.writer" \
+    --role="roles/artifactregistry.repoAdmin" \
     --condition=None \
     --quiet > /dev/null
-echo "  roles/artifactregistry.writer granted on $DEV_PROJECT_ID"
+echo "  roles/artifactregistry.repoAdmin granted on $DEV_PROJECT_ID"
 
 # Secret Manager Accessor: read MongoDB URIs
 echo "  Granting roles/secretmanager.secretAccessor..."
@@ -155,6 +155,16 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --condition=None \
     --quiet > /dev/null
 echo "  roles/datastore.user granted"
+
+# Secret Manager Accessor for Cloud Run runtime SA (default Compute Engine SA)
+echo "  Granting roles/secretmanager.secretAccessor to Cloud Run runtime SA..."
+COMPUTE_SA="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')-compute@developer.gserviceaccount.com"
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+    --member="serviceAccount:$COMPUTE_SA" \
+    --role="roles/secretmanager.secretAccessor" \
+    --condition=None \
+    --quiet > /dev/null
+echo "  roles/secretmanager.secretAccessor granted to $COMPUTE_SA"
 
 echo "All IAM roles assigned"
 echo ""
