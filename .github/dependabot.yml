@@ -8,6 +8,10 @@ updates:
     labels:
       - "dependencies"
       - "java"
+    groups:
+      java-dependencies:
+        patterns:
+          - "*"
 
   # Node.js/npm dependencies (frontend)
   - package-ecosystem: "npm"
@@ -17,6 +21,10 @@ updates:
     labels:
       - "dependencies"
       - "javascript"
+    groups:
+      node-dependencies:
+        patterns:
+          - "*"
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
@@ -26,3 +34,7 @@ updates:
     labels:
       - "dependencies"
       - "ci"
+    groups:
+      actions-dependencies:
+        patterns:
+          - "*"
