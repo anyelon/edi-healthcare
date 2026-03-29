@@ -7,6 +7,9 @@ spring:
   data:
     mongodb:
       uri: mongodb://localhost:27017/edi_healthcare
+      database: edi_healthcare
+  mongodb:
+    uri: mongodb://localhost:27017/edi_healthcare
 
 springdoc:
   api-docs:
