@@ -1,43 +1,64 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { EdiPreview } from "@/components/edi-preview";
-import { generateClaim } from "@/lib/api-client";
+import { GenerationLayout } from "@/components/generation-layout";
+import { DataTable, type ColumnDef } from "@/components/ui/data-table";
+import { fetchEncounters, generateClaim } from "@/lib/api-client";
+import type { EncounterResponse } from "@/types";
+
+const columns: ColumnDef<EncounterResponse>[] = [
+  { header: "Patient", accessor: "patientName" },
+  { header: "Provider", accessor: "providerName" },
+  { header: "Facility", accessor: "facilityName" },
+  { header: "Date of Service", accessor: "dateOfService" },
+  {
+    header: "Diagnoses",
+    accessor: "diagnoses",
+    cell: (row) => (
+      <div className="flex flex-wrap gap-1">
+        {row.diagnoses.map((d) => (
+          <Badge key={d.diagnosisCode} variant="secondary" className="bg-blue-500/10 text-blue-600 dark:text-blue-400">
+            {d.diagnosisCode}
+          </Badge>
+        ))}
+      </div>
+    ),
+  },
+  {
+    header: "Procedures",
+    accessor: "procedures",
+    cell: (row) => (
+      <div className="flex flex-wrap gap-1">
+        {row.procedures.map((p) => (
+          <Badge key={p.procedureCode} variant="secondary" className="bg-green-500/10 text-green-600 dark:text-green-400">
+            {p.procedureCode}
+          </Badge>
+        ))}
+      </div>
+    ),
+  },
+];
 
 export default function ClaimsPage() {
-  const [encounterIds, setEncounterIds] = useState("");
+  const [encounters, setEncounters] = useState<EncounterResponse[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [preview, setPreview] = useState<string | null>(null);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  useEffect(() => {
+    fetchEncounters()
+      .then(setEncounters)
+      .catch((err) =>
+        toast.error(err instanceof Error ? err.message : "Failed to fetch encounters")
+      )
+      .finally(() => setFetching(false));
+  }, []);
+
+  async function handleGenerate(ids: string[]) {
     setLoading(true);
-    setPreview(null);
-
-    const ids = encounterIds
-      .split(/[,\n]/)
-      .map((id) => id.trim())
-      .filter(Boolean);
-
-    if (ids.length === 0) {
-      toast.error("Please enter at least one encounter ID.");
-      setLoading(false);
-      return;
-    }
-
     try {
       const blob = await generateClaim(ids);
       const text = await blob.text();
@@ -50,59 +71,35 @@ export default function ClaimsPage() {
     }
   }
 
+  if (fetching) {
+    return (
+      <div className="flex h-64 items-center justify-center text-muted-foreground">
+        Loading encounters...
+      </div>
+    );
+  }
+
   return (
-    <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Claims Generation</h1>
-        <Badge variant="outline">EDI 837P</Badge>
-      </div>
-
-      <div className="max-w-2xl space-y-6">
-        <Card>
-          <form onSubmit={handleSubmit}>
-            <CardHeader>
-              <CardTitle className="text-sm font-semibold">
-                Generate EDI 837P Claims
-              </CardTitle>
-              <CardDescription>
-                Enter encounter IDs to generate a professional claims file
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <Label htmlFor="encounterIds">Encounter IDs</Label>
-                <Textarea
-                  id="encounterIds"
-                  value={encounterIds}
-                  onChange={(e) => setEncounterIds(e.target.value)}
-                  placeholder="Enter encounter IDs, one per line or comma-separated..."
-                  rows={4}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Enter one or more encounter IDs, separated by commas or newlines
-                </p>
-              </div>
-            </CardContent>
-            <CardFooter className="gap-2">
-              <Button type="submit" disabled={loading}>
-                {loading ? "Generating..." : "Generate Claims"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setEncounterIds("");
-                  setPreview(null);
-                }}
-              >
-                Clear
-              </Button>
-            </CardFooter>
-          </form>
-        </Card>
-
-        {preview && <EdiPreview content={preview} filename="837_claim.edi" />}
-      </div>
-    </div>
+    <GenerationLayout
+      title="Claims Generation"
+      description="Select encounters to generate EDI 837 professional claims"
+      badgeLabel="EDI 837P"
+      selectedCount={selectedIds.size}
+      totalCount={encounters.length}
+      isLoading={loading}
+      onGenerateAll={() => handleGenerate(encounters.map((e) => e.id))}
+      onGenerateSelected={() => handleGenerate([...selectedIds])}
+      preview={preview}
+      previewFilename="837_claim.edi"
+      onClosePreview={() => setPreview(null)}
+    >
+      <DataTable
+        columns={columns}
+        data={encounters}
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
+        getId={(e) => e.id}
+      />
+    </GenerationLayout>
   );
 }
