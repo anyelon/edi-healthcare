@@ -11,7 +11,7 @@ import type { PatientResponse } from "@/types";
 const columns: ColumnDef<PatientResponse>[] = [
   {
     header: "Name",
-    accessor: (row) => `${row.firstName} ${row.lastName}`,
+    accessor: "firstName",
     cell: (row) => `${row.firstName} ${row.lastName}`,
   },
   { header: "Date of Birth", accessor: "dateOfBirth" },
@@ -31,7 +31,9 @@ export default function EligibilityRequestPage() {
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  function loadPatients() {
+    setError(null);
+    setFetching(true);
     fetchPatients()
       .then(setPatients)
       .catch((err) => {
@@ -40,6 +42,10 @@ export default function EligibilityRequestPage() {
         toast.error(message);
       })
       .finally(() => setFetching(false));
+  }
+
+  useEffect(() => {
+    loadPatients();
   }, []);
 
   async function handleGenerate(ids: string[]) {
@@ -79,7 +85,7 @@ export default function EligibilityRequestPage() {
       ) : error ? (
         <div className="flex h-64 flex-col items-center justify-center gap-3 text-muted-foreground">
           <p>{error}</p>
-          <Button variant="outline" onClick={() => { setError(null); setFetching(true); fetchPatients().then(setPatients).catch((err) => setError(err instanceof Error ? err.message : "Failed to fetch patients")).finally(() => setFetching(false)); }}>
+          <Button variant="outline" onClick={loadPatients}>
             Retry
           </Button>
         </div>

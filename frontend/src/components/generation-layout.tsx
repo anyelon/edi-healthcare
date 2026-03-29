@@ -70,8 +70,7 @@ export function GenerationLayout({
 
         {preview && (
           <div className="w-[400px] shrink-0 space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold">EDI Preview</h2>
+            <div className="flex items-center justify-end">
               <Button variant="ghost" size="icon-xs" onClick={onClosePreview}>
                 <X className="h-4 w-4" />
               </Button>

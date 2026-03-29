@@ -50,7 +50,9 @@ export default function ClaimsPage() {
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  function loadEncounters() {
+    setError(null);
+    setFetching(true);
     fetchEncounters()
       .then(setEncounters)
       .catch((err) => {
@@ -59,6 +61,10 @@ export default function ClaimsPage() {
         toast.error(message);
       })
       .finally(() => setFetching(false));
+  }
+
+  useEffect(() => {
+    loadEncounters();
   }, []);
 
   async function handleGenerate(ids: string[]) {
@@ -96,7 +102,7 @@ export default function ClaimsPage() {
       ) : error ? (
         <div className="flex h-64 flex-col items-center justify-center gap-3 text-muted-foreground">
           <p>{error}</p>
-          <Button variant="outline" onClick={() => { setError(null); setFetching(true); fetchEncounters().then(setEncounters).catch((err) => setError(err instanceof Error ? err.message : "Failed to fetch encounters")).finally(() => setFetching(false)); }}>
+          <Button variant="outline" onClick={loadEncounters}>
             Retry
           </Button>
         </div>
