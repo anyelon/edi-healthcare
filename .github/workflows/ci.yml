@@ -3,6 +3,8 @@ name: CI/CD
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
     inputs:
       app:
@@ -154,7 +156,7 @@ jobs:
   # ------------------------------------------------------------------
   build-and-push:
     needs: [test, detect-changes]
-    if: needs.detect-changes.outputs.has_changes == 'true'
+    if: github.event_name != 'pull_request' && needs.detect-changes.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
     strategy:
       matrix:
