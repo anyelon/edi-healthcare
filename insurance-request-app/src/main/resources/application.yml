@@ -13,3 +13,12 @@ springdoc:
     path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
+
+edi:
+  interchange:
+    sender-id-qualifier: ZZ
+    sender-id: SENDER_ID
+    receiver-id-qualifier: ZZ
+    receiver-id: RECEIVER_ID
+    ack-requested: "0"
+    usage-indicator: T
