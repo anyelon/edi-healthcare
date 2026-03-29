@@ -1,4 +1,4 @@
-import type { SeedResult, EligibilityResponse } from "@/types";
+import type { SeedResult, EligibilityResponse, EncounterResponse, PatientResponse } from "@/types";
 
 export async function seedDatabase(): Promise<SeedResult> {
   const res = await fetch("/api/dev/seed", { method: "POST" });
@@ -38,6 +38,18 @@ export async function parseEligibilityResponse(
     body: formData,
   });
   if (!res.ok) throw new Error(`Response parsing failed: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchEncounters(): Promise<EncounterResponse[]> {
+  const res = await fetch("/api/encounters");
+  if (!res.ok) throw new Error(`Failed to fetch encounters: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchPatients(): Promise<PatientResponse[]> {
+  const res = await fetch("/api/patients");
+  if (!res.ok) throw new Error(`Failed to fetch patients: ${res.statusText}`);
   return res.json();
 }
 
