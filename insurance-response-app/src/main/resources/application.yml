@@ -1,5 +1,7 @@
 server:
   port: 8082
+  tomcat:
+    max-http-header-size: 128KB
 
 spring:
   application:
@@ -7,6 +9,9 @@ spring:
   data:
     mongodb:
       uri: mongodb://localhost:27017/edi_healthcare
+      database: edi_healthcare
+  mongodb:
+    uri: mongodb://localhost:27017/edi_healthcare
   servlet:
     multipart:
       max-file-size: 10MB
@@ -17,3 +22,7 @@ springdoc:
     path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
+
+edi:
+  archive:
+    path: edi/271/incoming
