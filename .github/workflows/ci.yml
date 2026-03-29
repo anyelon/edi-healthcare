@@ -28,10 +28,6 @@ on:
 env:
   GCP_REGION: us-central1
   GAR_REPOSITORY: edi-healthcare
-  GCP_PROJECT_DEV: ${{ vars.GCP_PROJECT_DEV }}
-  GCP_PROJECT_PROD: ${{ vars.GCP_PROJECT_PROD }}
-  WIF_PROVIDER: ${{ vars.WIF_PROVIDER }}
-  WIF_SERVICE_ACCOUNT: ${{ vars.WIF_SERVICE_ACCOUNT }}
 
 jobs:
   # ------------------------------------------------------------------
@@ -165,6 +161,11 @@ jobs:
     needs: [test, test-frontend, detect-changes]
     if: github.event_name != 'pull_request' && needs.detect-changes.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
+    environment: dev
+    env:
+      GCP_PROJECT_DEV: ${{ vars.GCP_PROJECT_DEV }}
+      WIF_PROVIDER: ${{ vars.WIF_PROVIDER }}
+      WIF_SERVICE_ACCOUNT: ${{ vars.WIF_SERVICE_ACCOUNT }}
     strategy:
       matrix:
         app: ${{ fromJson(needs.detect-changes.outputs.apps) }}
@@ -221,6 +222,10 @@ jobs:
     if: (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')) && needs.detect-changes.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
     environment: dev
+    env:
+      GCP_PROJECT_DEV: ${{ vars.GCP_PROJECT_DEV }}
+      WIF_PROVIDER: ${{ vars.WIF_PROVIDER }}
+      WIF_SERVICE_ACCOUNT: ${{ vars.WIF_SERVICE_ACCOUNT }}
     strategy:
       matrix:
         app: ${{ fromJson(needs.detect-changes.outputs.apps) }}
@@ -286,6 +291,11 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prod'
     runs-on: ubuntu-latest
     environment: prod
+    env:
+      GCP_PROJECT_DEV: ${{ vars.GCP_PROJECT_DEV }}
+      GCP_PROJECT_PROD: ${{ vars.GCP_PROJECT_PROD }}
+      WIF_PROVIDER: ${{ vars.WIF_PROVIDER }}
+      WIF_SERVICE_ACCOUNT: ${{ vars.WIF_SERVICE_ACCOUNT }}
     strategy:
       matrix:
         app: ${{ fromJson(needs.detect-changes.outputs.apps) }}
