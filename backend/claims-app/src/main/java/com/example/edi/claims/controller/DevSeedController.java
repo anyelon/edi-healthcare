@@ -177,6 +177,10 @@ public class DevSeedController {
         encounter1.setPracticeId(practice.getId());
         encounter1.setFacilityId(facility1.getId());
         encounter1.setDateOfService(LocalDate.of(2026, 3, 15));
+        encounter1.setRequestedProcedures(List.of(
+                new RequestedProcedure("99213", "Acute upper respiratory infection follow-up"),
+                new RequestedProcedure("87880", "Rapid strep test for persistent symptoms")
+        ));
         encounter1 = encounterRepository.save(encounter1);
 
         EncounterDiagnosis diag1a = new EncounterDiagnosis();
@@ -220,6 +224,10 @@ public class DevSeedController {
         encounter2.setPracticeId(practice.getId());
         encounter2.setFacilityId(facility2.getId());
         encounter2.setDateOfService(LocalDate.of(2026, 3, 16));
+        encounter2.setRequestedProcedures(List.of(
+                new RequestedProcedure("99214", "Chronic low back pain evaluation"),
+                new RequestedProcedure("97140", "Manual therapy for lumbar spine dysfunction")
+        ));
         encounter2 = encounterRepository.save(encounter2);
 
         EncounterDiagnosis diag2a = new EncounterDiagnosis();
