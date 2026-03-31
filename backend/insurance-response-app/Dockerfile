@@ -11,6 +11,7 @@ COPY backend/common/build.gradle backend/common/build.gradle
 COPY backend/claims-app/build.gradle backend/claims-app/build.gradle
 COPY backend/insurance-request-app/build.gradle backend/insurance-request-app/build.gradle
 COPY backend/insurance-response-app/build.gradle backend/insurance-response-app/build.gradle
+COPY backend/prior-auth-app/build.gradle backend/prior-auth-app/build.gradle
 
 # Download dependencies (cached unless build files change)
 RUN ./gradlew dependencies --no-daemon || true
