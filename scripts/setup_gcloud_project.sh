@@ -24,12 +24,14 @@ if [[ "$ENV" == "dev" ]]; then
   CLAIMS_API_URL="https://claims-app-dev-1053092970650.us-central1.run.app"
   REQUEST_API_URL="https://insurance-request-app-dev-1053092970650.us-central1.run.app"
   RESPONSE_API_URL="https://insurance-response-app-dev-1053092970650.us-central1.run.app"
+  PRIOR_AUTH_API_URL="https://prior-auth-app-dev-1053092970650.us-central1.run.app"
 else
   PROJECT_ID="edi-healthcare-prod"
   SECRET_NAME="mongodb-uri-prod"
   CLAIMS_API_URL="https://claims-app-prod-PLACEHOLDER.us-central1.run.app"
   REQUEST_API_URL="https://insurance-request-app-prod-PLACEHOLDER.us-central1.run.app"
   RESPONSE_API_URL="https://insurance-response-app-prod-PLACEHOLDER.us-central1.run.app"
+  PRIOR_AUTH_API_URL="https://prior-auth-app-prod-PLACEHOLDER.us-central1.run.app"
 fi
 
 echo ""
@@ -255,6 +257,7 @@ create_or_update_secret() {
 create_or_update_secret "claims-api-url-$ENV" "$CLAIMS_API_URL"
 create_or_update_secret "request-api-url-$ENV" "$REQUEST_API_URL"
 create_or_update_secret "response-api-url-$ENV" "$RESPONSE_API_URL"
+create_or_update_secret "prior-auth-api-url-$ENV" "$PRIOR_AUTH_API_URL"
 echo ""
 
 # === Summary ===
