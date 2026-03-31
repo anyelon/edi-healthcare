@@ -1,0 +1,36 @@
+# backend/prior-auth-app/src/main/resources/application.yml
+server:
+  port: 8083
+  tomcat:
+    max-http-header-size: 128KB
+
+spring:
+  application:
+    name: prior-auth-app
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/edi_healthcare
+      database: edi_healthcare
+  mongodb:
+    uri: mongodb://localhost:27017/edi_healthcare
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+edi:
+  interchange:
+    sender-id-qualifier: ZZ
+    sender-id: SENDER_ID
+    receiver-id-qualifier: ZZ
+    receiver-id: RECEIVER_ID
+    ack-requested: "0"
+    usage-indicator: T
+  archive:
+    path: edi/278/incoming
