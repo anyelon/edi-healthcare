@@ -1,4 +1,4 @@
-import type { SeedResult, EligibilityResponse, EncounterResponse, PatientResponse } from "@/types";
+import type { SeedResult, EligibilityResponse, EncounterResponse, PatientResponse, PriorAuthResponse } from "@/types";
 
 export async function seedDatabase(): Promise<SeedResult> {
   const res = await fetch("/api/dev/seed", { method: "POST" });
@@ -50,6 +50,33 @@ export async function fetchEncounters(): Promise<EncounterResponse[]> {
 export async function fetchPatients(): Promise<PatientResponse[]> {
   const res = await fetch("/api/patients");
   if (!res.ok) throw new Error(`Failed to fetch patients: ${res.statusText}`);
+  return res.json();
+}
+
+export async function generatePriorAuth(
+  encounterIds: string[]
+): Promise<Blob> {
+  const res = await fetch("/api/prior-auth/generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ encounterIds }),
+  });
+  if (!res.ok)
+    throw new Error(`Prior auth generation failed: ${res.statusText}`);
+  return res.blob();
+}
+
+export async function parsePriorAuthResponse(
+  file: File
+): Promise<PriorAuthResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch("/api/prior-auth/response", {
+    method: "POST",
+    body: formData,
+  });
+  if (!res.ok)
+    throw new Error(`Prior auth response parsing failed: ${res.statusText}`);
   return res.json();
 }
 

@@ -69,6 +69,27 @@ export interface EncounterResponse {
   authorizationNumber: string;
   diagnoses: DiagnosisResponse[];
   procedures: ProcedureResponse[];
+  requestedProcedures: RequestedProcedureResponse[];
+}
+
+export interface RequestedProcedureResponse {
+  procedureCode: string;
+  clinicalReason: string;
+}
+
+export interface AuthorizationDecision {
+  action: string;
+  authorizationNumber: string | null;
+  encounterId: string;
+}
+
+export interface PriorAuthResponse {
+  payerName: string;
+  payerId: string;
+  subscriberFirstName: string;
+  subscriberLastName: string;
+  memberId: string;
+  decisions: AuthorizationDecision[];
 }
 
 export interface PatientResponse {
