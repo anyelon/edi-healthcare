@@ -8,6 +8,7 @@ import {
   ArrowRightLeft,
   FileSearch,
   Database,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -28,6 +29,7 @@ const workflowItems = [
   { href: "/claims", label: "Claims (837)", icon: FileText },
   { href: "/eligibility-request", label: "Eligibility Request (270)", icon: ArrowRightLeft },
   { href: "/eligibility-response", label: "Eligibility Response (271)", icon: FileSearch },
+  { href: "/prior-auth", label: "Prior Auth (278)", icon: ShieldCheck },
 ];
 
 export function AppSidebar() {

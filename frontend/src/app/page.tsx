@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FileText, ArrowRightLeft, FileSearch } from "lucide-react";
+import { FileText, ArrowRightLeft, FileSearch, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,6 +39,15 @@ const workflows = [
     icon: FileSearch,
     primary: false,
   },
+  {
+    href: "/prior-auth",
+    title: "Prior Authorization",
+    badge: "EDI 278",
+    description: "Generate prior authorization requests and parse responses.",
+    detail: "Submit encounter IDs to request authorization, or upload responses to update records.",
+    icon: ShieldCheck,
+    primary: false,
+  },
 ];
 
 export default function Dashboard() {
@@ -51,7 +60,7 @@ export default function Dashboard() {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {workflows.map((wf) => (
           <Card key={wf.href}>
             <CardHeader>
