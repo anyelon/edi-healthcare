@@ -160,6 +160,8 @@ When adding a new backend microservice, the following must ALL be addressed — 
 5. **GCP Secret Manager secrets** — Create `<app>-api-url-dev` and `<app>-api-url-prod` secrets containing the Cloud Run service URL
 6. **Frontend deploy secrets** — Add the new `<APP>_API_URL=<app>-api-url-<env>:latest` to the frontend's `--set-secrets` in the CI/CD workflow (both dev and prod)
 
+7. **Update ALL existing Dockerfiles** — Every existing app's Dockerfile must `COPY` the new module's `build.gradle` because `settings.gradle` includes all modules and Gradle configures them all during any build. Without this, Docker builds of other apps will fail with "Configuring project without an existing directory is not allowed."
+
 Missing any of these steps will result in the service not being deployed or the frontend not being able to reach it in cloud environments.
 
 ## Async Data Fetching
