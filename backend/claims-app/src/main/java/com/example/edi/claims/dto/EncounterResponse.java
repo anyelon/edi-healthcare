@@ -14,5 +14,6 @@ public record EncounterResponse(
         LocalDate dateOfService,
         String authorizationNumber,
         List<DiagnosisResponse> diagnoses,
-        List<ProcedureResponse> procedures
+        List<ProcedureResponse> procedures,
+        List<RequestedProcedureResponse> requestedProcedures
 ) {}

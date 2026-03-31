@@ -33,7 +33,8 @@ class EncounterControllerTest {
                 "ENC1", "P1", "JOHN SMITH", "PROV1", "Sarah Johnson",
                 "FAC1", "Main Office", LocalDate.of(2026, 3, 15), "AUTH001",
                 List.of(new DiagnosisResponse("J06.9", 1)),
-                List.of(new ProcedureResponse("99213", List.of(), new BigDecimal("150.00"), 1))
+                List.of(new ProcedureResponse("99213", List.of(), new BigDecimal("150.00"), 1)),
+                List.of()
         );
 
         when(encounterService.getAllEncounters()).thenReturn(List.of(encounter));

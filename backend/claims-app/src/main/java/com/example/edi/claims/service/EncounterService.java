@@ -3,6 +3,8 @@ package com.example.edi.claims.service;
 import com.example.edi.claims.dto.DiagnosisResponse;
 import com.example.edi.claims.dto.EncounterResponse;
 import com.example.edi.claims.dto.ProcedureResponse;
+import com.example.edi.claims.dto.RequestedProcedureResponse;
+import com.example.edi.common.document.RequestedProcedure;
 import com.example.edi.common.document.*;
 import com.example.edi.common.repository.*;
 import org.springframework.stereotype.Service;
@@ -84,6 +86,12 @@ public class EncounterService {
                             p.getUnits()))
                     .toList();
 
+            List<RequestedProcedureResponse> requestedProcedures = encounter.getRequestedProcedures() != null
+                    ? encounter.getRequestedProcedures().stream()
+                            .map(rp -> new RequestedProcedureResponse(rp.getProcedureCode(), rp.getClinicalReason()))
+                            .toList()
+                    : List.of();
+
             return new EncounterResponse(
                     encounter.getId(),
                     encounter.getPatientId(),
@@ -95,7 +103,8 @@ public class EncounterService {
                     encounter.getDateOfService(),
                     encounter.getAuthorizationNumber(),
                     diagnoses,
-                    procedures
+                    procedures,
+                    requestedProcedures
             );
         }).toList();
     }
