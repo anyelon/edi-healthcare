@@ -16,6 +16,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 public class PriorAuthService {
@@ -64,18 +65,25 @@ public class PriorAuthService {
             Encounter encounter = encounterRepository.findById(encounterId)
                     .orElseThrow(() -> new EncounterNotFoundException(encounterId));
 
-            Patient patient = patientRepository.findById(encounter.getPatientId())
-                    .orElseThrow(() -> new PatientNotFoundException(encounter.getPatientId()));
+            CompletableFuture<Patient> patientFuture = CompletableFuture.supplyAsync(() ->
+                    patientRepository.findById(encounter.getPatientId())
+                            .orElseThrow(() -> new PatientNotFoundException(encounter.getPatientId())));
 
-            PatientInsurance insurance = patientInsuranceRepository
-                    .findByPatientIdAndTerminationDateIsNull(encounter.getPatientId())
-                    .orElseThrow(() -> new InsuranceNotFoundException(encounter.getPatientId()));
+            CompletableFuture<PatientInsurance> insuranceFuture = CompletableFuture.supplyAsync(() ->
+                    patientInsuranceRepository
+                            .findByPatientIdAndTerminationDateIsNull(encounter.getPatientId())
+                            .orElseThrow(() -> new InsuranceNotFoundException(encounter.getPatientId())));
+
+            CompletableFuture<Practice> practiceFuture = CompletableFuture.supplyAsync(() ->
+                    practiceRepository.findById(encounter.getPracticeId())
+                            .orElseThrow(() -> new PracticeNotFoundException(encounter.getPracticeId())));
+
+            Patient patient = patientFuture.join();
+            PatientInsurance insurance = insuranceFuture.join();
+            Practice practice = practiceFuture.join();
 
             Payer payer = payerRepository.findById(insurance.getPayerId())
                     .orElseThrow(() -> new PayerNotFoundException(insurance.getPayerId()));
-
-            Practice practice = practiceRepository.findById(encounter.getPracticeId())
-                    .orElseThrow(() -> new PracticeNotFoundException(encounter.getPracticeId()));
 
             List<RequestedProcedure> requestedProcedures = encounter.getRequestedProcedures() != null
                     ? encounter.getRequestedProcedures()
