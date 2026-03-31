@@ -1,5 +1,6 @@
 package com.example.edi.priorauth.service;
 
+import com.example.edi.common.document.EncounterProcedure;
 import com.example.edi.common.document.Patient;
 import com.example.edi.common.document.PatientInsurance;
 import com.example.edi.common.document.Payer;
@@ -80,9 +81,9 @@ public class EDI278Mapper {
 
             String serviceDate = formatDate(bundle.encounter().getDateOfService());
 
-            List<ServiceReviewInfo> services = bundle.requestedProcedures().stream()
-                    .map(rp -> new ServiceReviewInfo(
-                            rp.getProcedureCode(), rp.getClinicalReason(), serviceDate))
+            List<ServiceReviewInfo> services = bundle.authProcedures().stream()
+                    .map(ep -> new ServiceReviewInfo(
+                            ep.getProcedureCode(), ep.getClinicalReason(), serviceDate))
                     .toList();
 
             subscriberGroups.add(new EDI278Request.SubscriberReviewGroup(

@@ -9,5 +9,5 @@ public record PriorAuthBundle(
         PatientInsurance insurance,
         Payer payer,
         Practice practice,
-        List<RequestedProcedure> requestedProcedures
+        List<EncounterProcedure> authProcedures
 ) {}

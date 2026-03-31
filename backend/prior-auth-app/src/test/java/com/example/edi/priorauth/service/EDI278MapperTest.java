@@ -47,9 +47,17 @@ class EDI278MapperTest {
         encounter.setPracticeId("PRAC001");
         encounter.setFacilityId("FAC001");
         encounter.setDateOfService(LocalDate.of(2026, 4, 15));
-        encounter.setRequestedProcedures(List.of(
-                new RequestedProcedure("99213", "Chronic pain management")
-        ));
+
+        EncounterProcedure proc = new EncounterProcedure();
+        proc.setProcedureCode("99213");
+        proc.setNeedsAuth(true);
+        proc.setClinicalReason("Chronic pain management");
+        proc.setLineNumber(1);
+        proc.setUnits(1);
+        proc.setUnitType("UN");
+        proc.setChargeAmount(new java.math.BigDecimal("150.00"));
+        proc.setModifiers(java.util.List.of());
+        proc.setDiagnosisPointers(java.util.List.of(1));
 
         Patient patient = new Patient();
         patient.setId("PAT001");
@@ -79,6 +87,6 @@ class EDI278MapperTest {
         practice.setTaxId("123456789");
 
         return new PriorAuthBundle(encounter, patient, insurance, payer, practice,
-                encounter.getRequestedProcedures());
+                List.of(proc));
     }
 }

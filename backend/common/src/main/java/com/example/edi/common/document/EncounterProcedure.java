@@ -19,6 +19,8 @@ public class EncounterProcedure {
     private int units;
     private String unitType;
     private List<Integer> diagnosisPointers;
+    private boolean needsAuth;
+    private String clinicalReason;
 
     public EncounterProcedure() {}
 
@@ -48,4 +50,10 @@ public class EncounterProcedure {
 
     public List<Integer> getDiagnosisPointers() { return diagnosisPointers; }
     public void setDiagnosisPointers(List<Integer> diagnosisPointers) { this.diagnosisPointers = diagnosisPointers; }
+
+    public boolean isNeedsAuth() { return needsAuth; }
+    public void setNeedsAuth(boolean needsAuth) { this.needsAuth = needsAuth; }
+
+    public String getClinicalReason() { return clinicalReason; }
+    public void setClinicalReason(String clinicalReason) { this.clinicalReason = clinicalReason; }
 }

@@ -33,25 +33,28 @@ const columns: ColumnDef<EncounterResponse>[] = [
   { header: "Date of Service", accessor: "dateOfService" },
   { header: "Provider", accessor: "providerName" },
   {
-    header: "Requested Procedures",
-    accessor: "requestedProcedures",
-    cell: (row) => (
-      <div className="flex flex-wrap gap-1">
-        {row.requestedProcedures && row.requestedProcedures.length > 0 ? (
-          row.requestedProcedures.map((p) => (
-            <Badge
-              key={p.procedureCode}
-              variant="secondary"
-              className="bg-purple-500/10 text-purple-600 dark:text-purple-400"
-            >
-              {p.procedureCode}
-            </Badge>
-          ))
-        ) : (
-          <span className="text-xs text-muted-foreground">—</span>
-        )}
-      </div>
-    ),
+    header: "Needs Auth",
+    accessor: "procedures",
+    cell: (row) => {
+      const authProcs = (row.procedures ?? []).filter((p) => p.needsAuth);
+      return (
+        <div className="flex flex-wrap gap-1">
+          {authProcs.length > 0 ? (
+            authProcs.map((p) => (
+              <Badge
+                key={p.procedureCode}
+                variant="secondary"
+                className="bg-purple-500/10 text-purple-600 dark:text-purple-400"
+              >
+                {p.procedureCode}
+              </Badge>
+            ))
+          ) : (
+            <span className="text-xs text-muted-foreground">—</span>
+          )}
+        </div>
+      );
+    },
   },
   {
     header: "Auth Status",

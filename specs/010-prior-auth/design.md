@@ -6,24 +6,22 @@ New `prior-auth-app` microservice that generates EDI 278 Health Care Services Re
 
 ## Data Model Changes
 
-### RequestedProcedure (embedded class in common)
+### EncounterProcedure (updated)
 
-New embedded class added to `com.example.edi.common.document`:
-
-| Field | Type | Description |
-|-------|------|-------------|
-| procedureCode | String | CPT/HCPCS code for the requested service |
-| clinicalReason | String | Free-text clinical justification |
-
-### Encounter (updated)
-
-Add to the existing `Encounter` document:
+Add two fields to the existing `EncounterProcedure` document in `com.example.edi.common.document`:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| requestedProcedures | List\<RequestedProcedure\> | Procedures requiring prior authorization |
+| needsAuth | boolean | Whether this procedure requires prior authorization |
+| clinicalReason | String | Free-text clinical justification (null when needsAuth is false) |
 
-The `EncounterResponse` DTO and GET endpoint must also expose `requestedProcedures`.
+This avoids a separate embedded list on `Encounter` — procedures that need prior auth are already in the `encounter_procedures` collection, so we flag them there. The prior-auth service filters for `needsAuth == true` when building the 278 request.
+
+The `ProcedureResponse` DTO, `EncounterResponse`, and GET endpoint must also expose `needsAuth` and `clinicalReason`.
+
+### Removed
+
+The `RequestedProcedure` embedded class and `Encounter.requestedProcedures` field are removed. The `RequestedProcedureResponse` frontend type is removed.
 
 ## Backend Module
 
@@ -109,7 +107,7 @@ Same envelope. Key differences:
 ### Request Generation
 
 1. Controller receives `PriorAuthRequestDTO` with `encounterIds`
-2. `PriorAuthService` fetches per encounter: Encounter, Patient, PatientInsurance, Payer, Practice — bundles into `PriorAuthBundle`
+2. `PriorAuthService` fetches per encounter: Encounter, Patient, PatientInsurance, Payer, Practice, and EncounterProcedures (filtered to `needsAuth == true`) — bundles into `PriorAuthBundle`
 3. `EDI278Mapper` maps bundles to `EDI278Request` domain model
 4. `EDI278Generator` writes EDI string via StAEDI
 5. Controller returns `.edi` file as byte array download
@@ -131,7 +129,7 @@ Same envelope. Key differences:
 
 **Generate Request tab:**
 - Uses `GenerationLayout` + `DataTable` (same pattern as claims page)
-- Displays encounters with columns: Patient Name, Date of Service, Provider, Requested Procedures, Authorization Status
+- Displays encounters with columns: Patient Name, Date of Service, Provider, Procedures Needing Auth (filtered from procedures where needsAuth is true), Authorization Status
 - Select encounters, generate EDI 278, preview panel shows output
 
 **Parse Response tab:**
@@ -158,23 +156,26 @@ parsePriorAuthResponse(file: File): Promise<PriorAuthResponse>
 ### Type Additions
 
 ```typescript
-interface RequestedProcedureResponse {
+interface ProcedureResponse {
   procedureCode: string;
-  clinicalReason: string;
+  modifiers: string[];
+  chargeAmount: number;
+  units: number;
+  needsAuth: boolean;
+  clinicalReason: string | null;
 }
 
 interface PriorAuthResponse {
-  id: string;
-  status: string;           // CERTIFIED, DENIED, PENDED
-  authorizationNumber: string | null;
-  patientFirstName: string;
-  patientLastName: string;
-  requestedProcedures: RequestedProcedureResponse[];
-  errors: string[];
+  payerName: string;
+  payerId: string;
+  subscriberFirstName: string;
+  subscriberLastName: string;
+  memberId: string;
+  decisions: AuthorizationDecision[];
 }
 ```
 
-`EncounterResponse` updated to include `requestedProcedures: RequestedProcedureResponse[]`.
+`ProcedureResponse` updated with `needsAuth` and `clinicalReason`. The separate `RequestedProcedureResponse` type is removed.
 
 ### Dashboard
 

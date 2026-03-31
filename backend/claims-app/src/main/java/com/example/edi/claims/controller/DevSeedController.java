@@ -177,10 +177,6 @@ public class DevSeedController {
         encounter1.setPracticeId(practice.getId());
         encounter1.setFacilityId(facility1.getId());
         encounter1.setDateOfService(LocalDate.of(2026, 3, 15));
-        encounter1.setRequestedProcedures(List.of(
-                new RequestedProcedure("99213", "Acute upper respiratory infection follow-up"),
-                new RequestedProcedure("87880", "Rapid strep test for persistent symptoms")
-        ));
         encounter1 = encounterRepository.save(encounter1);
 
         EncounterDiagnosis diag1a = new EncounterDiagnosis();
@@ -204,6 +200,8 @@ public class DevSeedController {
         proc1a.setUnits(1);
         proc1a.setUnitType("UN");
         proc1a.setDiagnosisPointers(List.of(1, 2));
+        proc1a.setNeedsAuth(true);
+        proc1a.setClinicalReason("Acute upper respiratory infection follow-up");
         encounterProcedureRepository.save(proc1a);
 
         EncounterProcedure proc1b = new EncounterProcedure();
@@ -224,10 +222,6 @@ public class DevSeedController {
         encounter2.setPracticeId(practice.getId());
         encounter2.setFacilityId(facility2.getId());
         encounter2.setDateOfService(LocalDate.of(2026, 3, 16));
-        encounter2.setRequestedProcedures(List.of(
-                new RequestedProcedure("99214", "Chronic low back pain evaluation"),
-                new RequestedProcedure("97140", "Manual therapy for lumbar spine dysfunction")
-        ));
         encounter2 = encounterRepository.save(encounter2);
 
         EncounterDiagnosis diag2a = new EncounterDiagnosis();
@@ -245,6 +239,8 @@ public class DevSeedController {
         proc2a.setUnits(1);
         proc2a.setUnitType("UN");
         proc2a.setDiagnosisPointers(List.of(1));
+        proc2a.setNeedsAuth(true);
+        proc2a.setClinicalReason("Chronic low back pain evaluation");
         encounterProcedureRepository.save(proc2a);
 
         EncounterProcedure proc2b = new EncounterProcedure();
@@ -256,6 +252,8 @@ public class DevSeedController {
         proc2b.setUnits(2);
         proc2b.setUnitType("UN");
         proc2b.setDiagnosisPointers(List.of(1));
+        proc2b.setNeedsAuth(true);
+        proc2b.setClinicalReason("Manual therapy for lumbar spine dysfunction");
         encounterProcedureRepository.save(proc2b);
 
         // Build response

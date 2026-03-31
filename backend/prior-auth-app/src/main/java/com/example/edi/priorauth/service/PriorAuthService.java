@@ -26,6 +26,7 @@ public class PriorAuthService {
     private final PatientInsuranceRepository patientInsuranceRepository;
     private final PayerRepository payerRepository;
     private final PracticeRepository practiceRepository;
+    private final EncounterProcedureRepository encounterProcedureRepository;
     private final EDI278Mapper edi278Mapper;
     private final EDI278Generator edi278Generator;
     private final EDI278Parser edi278Parser;
@@ -39,6 +40,7 @@ public class PriorAuthService {
             PatientInsuranceRepository patientInsuranceRepository,
             PayerRepository payerRepository,
             PracticeRepository practiceRepository,
+            EncounterProcedureRepository encounterProcedureRepository,
             EDI278Mapper edi278Mapper,
             EDI278Generator edi278Generator,
             EDI278Parser edi278Parser,
@@ -50,6 +52,7 @@ public class PriorAuthService {
         this.patientInsuranceRepository = patientInsuranceRepository;
         this.payerRepository = payerRepository;
         this.practiceRepository = practiceRepository;
+        this.encounterProcedureRepository = encounterProcedureRepository;
         this.edi278Mapper = edi278Mapper;
         this.edi278Generator = edi278Generator;
         this.edi278Parser = edi278Parser;
@@ -85,11 +88,12 @@ public class PriorAuthService {
             Payer payer = payerRepository.findById(insurance.getPayerId())
                     .orElseThrow(() -> new PayerNotFoundException(insurance.getPayerId()));
 
-            List<RequestedProcedure> requestedProcedures = encounter.getRequestedProcedures() != null
-                    ? encounter.getRequestedProcedures()
-                    : List.of();
+            List<EncounterProcedure> authProcedures = encounterProcedureRepository
+                    .findByEncounterIdOrderByLineNumberAsc(encounterId).stream()
+                    .filter(EncounterProcedure::isNeedsAuth)
+                    .toList();
 
-            bundles.add(new PriorAuthBundle(encounter, patient, insurance, payer, practice, requestedProcedures));
+            bundles.add(new PriorAuthBundle(encounter, patient, insurance, payer, practice, authProcedures));
         }
 
         EDI278Request request = edi278Mapper.map(bundles, interchangeProperties);

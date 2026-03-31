@@ -55,6 +55,8 @@ export interface ProcedureResponse {
   modifiers: string[];
   chargeAmount: number;
   units: number;
+  needsAuth: boolean;
+  clinicalReason: string | null;
 }
 
 export interface EncounterResponse {
@@ -69,12 +71,6 @@ export interface EncounterResponse {
   authorizationNumber: string;
   diagnoses: DiagnosisResponse[];
   procedures: ProcedureResponse[];
-  requestedProcedures: RequestedProcedureResponse[];
-}
-
-export interface RequestedProcedureResponse {
-  procedureCode: string;
-  clinicalReason: string;
 }
 
 export interface AuthorizationDecision {

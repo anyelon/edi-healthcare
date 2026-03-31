@@ -4,7 +4,6 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDate;
-import java.util.List;
 
 @Document(collection = "encounters")
 public class Encounter {
@@ -17,7 +16,6 @@ public class Encounter {
     private String facilityId;
     private LocalDate dateOfService;
     private String authorizationNumber;
-    private List<RequestedProcedure> requestedProcedures;
 
     public Encounter() {}
 
@@ -41,7 +39,4 @@ public class Encounter {
 
     public String getAuthorizationNumber() { return authorizationNumber; }
     public void setAuthorizationNumber(String authorizationNumber) { this.authorizationNumber = authorizationNumber; }
-
-    public List<RequestedProcedure> getRequestedProcedures() { return requestedProcedures; }
-    public void setRequestedProcedures(List<RequestedProcedure> requestedProcedures) { this.requestedProcedures = requestedProcedures; }
 }

@@ -4,7 +4,7 @@
 
 **Goal:** Add a `prior-auth-app` microservice that generates EDI 278 prior authorization requests from encounter data and parses EDI 278 responses, writing the authorization number back to the encounter.
 
-**Architecture:** New Gradle module `prior-auth-app` (port 8083) following the same Controller to Service to EDI Service layering as the existing apps. Extends the `Encounter` entity with `requestedProcedures`. Frontend adds a tabbed page with encounter table selection and file upload.
+**Architecture:** New Gradle module `prior-auth-app` (port 8083) following the same Controller to Service to EDI Service layering as the existing apps. Uses `needsAuth` and `clinicalReason` fields on `EncounterProcedure` to identify procedures requiring prior authorization. Frontend adds a tabbed page with encounter table selection and file upload.
 
 **Tech Stack:** Java 21, Spring Boot 4.0.5, StAEDI 1.26.2, MongoDB, Next.js 16, React 19, TypeScript, Tailwind CSS 4, shadcn/ui
 
@@ -2995,7 +2995,316 @@ git commit -m "feat: add cloud deployment config for prior-auth-app"
 
 ---
 
-### Task 20: Full build verification
+### Task 20: Refactor data model — move auth fields from Encounter to EncounterProcedure
+
+The original design used a separate `RequestedProcedure` embedded list on `Encounter`. This is being replaced: procedures needing prior auth are already in `encounter_procedures`, so we add `needsAuth` and `clinicalReason` directly to `EncounterProcedure`.
+
+**Files to modify:**
+
+| Layer | File | Change |
+|-------|------|--------|
+| Common | `EncounterProcedure.java` | Add `boolean needsAuth` and `String clinicalReason` with getters/setters |
+| Common | `Encounter.java` | Remove `requestedProcedures` field, getter, setter, and `List` import |
+| Common | `RequestedProcedure.java` | Delete this file entirely |
+| Claims DTO | `RequestedProcedureResponse.java` | Delete this file entirely |
+| Claims DTO | `ProcedureResponse.java` | Add `boolean needsAuth` and `String clinicalReason` to the record |
+| Claims DTO | `EncounterResponse.java` | Remove `requestedProcedures` field (last parameter) |
+| Claims Service | `EncounterService.java` | Remove `requestedProcedures` mapping; add `needsAuth` and `clinicalReason` to `ProcedureResponse` constructor; remove `RequestedProcedure` import |
+| Claims Test | `EncounterControllerTest.java` | Update `EncounterResponse` constructor (remove last param) |
+| Claims Seed | `DevSeedController.java` | Remove `setRequestedProcedures` calls; add `setNeedsAuth(true)` and `setClinicalReason(...)` on specific `EncounterProcedure` objects |
+| Prior-auth DTO | `PriorAuthBundle.java` | Replace `List<RequestedProcedure>` with `List<EncounterProcedure>` (filtered to needsAuth) |
+| Prior-auth Service | `PriorAuthService.java` | Fetch `EncounterProcedure` list from `EncounterProcedureRepository`, filter `needsAuth == true`, pass to bundle |
+| Prior-auth Mapper | `EDI278Mapper.java` | Change `bundle.requestedProcedures()` to `bundle.authProcedures()`, map from `EncounterProcedure` fields |
+| Prior-auth Test | `EDI278MapperTest.java` | Use `EncounterProcedure` with `needsAuth`/`clinicalReason` instead of `RequestedProcedure` |
+| Frontend types | `types/index.ts` | Remove `RequestedProcedureResponse` and `requestedProcedures` from `EncounterResponse`; add `needsAuth` and `clinicalReason` to `ProcedureResponse` |
+| Frontend page | `prior-auth/page.tsx` | Update "Requested Procedures" column to filter `row.procedures` where `needsAuth` is true |
+
+- [ ] **Step 1: Update EncounterProcedure — add needsAuth and clinicalReason**
+
+In `backend/common/src/main/java/com/example/edi/common/document/EncounterProcedure.java`, add after `private List<Integer> diagnosisPointers;`:
+
+```java
+private boolean needsAuth;
+private String clinicalReason;
+```
+
+Add getters/setters:
+
+```java
+public boolean isNeedsAuth() { return needsAuth; }
+public void setNeedsAuth(boolean needsAuth) { this.needsAuth = needsAuth; }
+
+public String getClinicalReason() { return clinicalReason; }
+public void setClinicalReason(String clinicalReason) { this.clinicalReason = clinicalReason; }
+```
+
+- [ ] **Step 2: Remove RequestedProcedure from Encounter**
+
+In `backend/common/src/main/java/com/example/edi/common/document/Encounter.java`:
+- Remove `private List<RequestedProcedure> requestedProcedures;`
+- Remove getter `getRequestedProcedures()` and setter `setRequestedProcedures(...)`
+- Remove `import java.util.List;`
+
+- [ ] **Step 3: Delete RequestedProcedure.java**
+
+Delete `backend/common/src/main/java/com/example/edi/common/document/RequestedProcedure.java`
+
+- [ ] **Step 4: Update ProcedureResponse — add needsAuth and clinicalReason**
+
+Replace `backend/claims-app/src/main/java/com/example/edi/claims/dto/ProcedureResponse.java`:
+
+```java
+package com.example.edi.claims.dto;
+
+import java.math.BigDecimal;
+import java.util.List;
+
+public record ProcedureResponse(
+        String procedureCode,
+        List<String> modifiers,
+        BigDecimal chargeAmount,
+        int units,
+        boolean needsAuth,
+        String clinicalReason
+) {}
+```
+
+- [ ] **Step 5: Delete RequestedProcedureResponse.java**
+
+Delete `backend/claims-app/src/main/java/com/example/edi/claims/dto/RequestedProcedureResponse.java`
+
+- [ ] **Step 6: Remove requestedProcedures from EncounterResponse**
+
+Replace `backend/claims-app/src/main/java/com/example/edi/claims/dto/EncounterResponse.java`:
+
+```java
+package com.example.edi.claims.dto;
+
+import java.time.LocalDate;
+import java.util.List;
+
+public record EncounterResponse(
+        String id,
+        String patientId,
+        String patientName,
+        String providerId,
+        String providerName,
+        String facilityId,
+        String facilityName,
+        LocalDate dateOfService,
+        String authorizationNumber,
+        List<DiagnosisResponse> diagnoses,
+        List<ProcedureResponse> procedures
+) {}
+```
+
+- [ ] **Step 7: Update EncounterService mapping**
+
+In `backend/claims-app/src/main/java/com/example/edi/claims/service/EncounterService.java`:
+- Remove the `requestedProcedures` mapping block and `RequestedProcedure` import
+- Update the `ProcedureResponse` constructor in the procedures mapping to include `needsAuth` and `clinicalReason`:
+
+```java
+List<ProcedureResponse> procedures = proceduresByEncounterId
+        .getOrDefault(encounter.getId(), List.of()).stream()
+        .map(p -> new ProcedureResponse(
+                p.getProcedureCode(),
+                p.getModifiers(),
+                p.getChargeAmount(),
+                p.getUnits(),
+                p.isNeedsAuth(),
+                p.getClinicalReason()))
+        .toList();
+```
+
+- Remove `requestedProcedures` from the `EncounterResponse` constructor call (it was the last parameter).
+
+- [ ] **Step 8: Update EncounterControllerTest**
+
+In `backend/claims-app/src/test/java/com/example/edi/claims/controller/EncounterControllerTest.java`, remove the `List.of()` that was the last argument in the `EncounterResponse` constructor.
+
+- [ ] **Step 9: Update DevSeedController**
+
+In `backend/claims-app/src/main/java/com/example/edi/claims/controller/DevSeedController.java`:
+- Remove `setRequestedProcedures(...)` calls from both encounters
+- Add `needsAuth` and `clinicalReason` to specific `EncounterProcedure` objects:
+
+On `proc1a` (99213):
+```java
+proc1a.setNeedsAuth(true);
+proc1a.setClinicalReason("Acute upper respiratory infection follow-up");
+```
+
+On `proc2a` (99214):
+```java
+proc2a.setNeedsAuth(true);
+proc2a.setClinicalReason("Chronic low back pain evaluation");
+```
+
+On `proc2b` (97140):
+```java
+proc2b.setNeedsAuth(true);
+proc2b.setClinicalReason("Manual therapy for lumbar spine dysfunction");
+```
+
+Leave `proc1b` (87880) without needsAuth (defaults to false).
+
+- [ ] **Step 10: Build claims-app**
+
+Run: `./gradlew :claims-app:build`
+Expected: BUILD SUCCESSFUL
+
+- [ ] **Step 11: Update PriorAuthBundle**
+
+Replace `backend/prior-auth-app/src/main/java/com/example/edi/priorauth/dto/PriorAuthBundle.java`:
+
+```java
+package com.example.edi.priorauth.dto;
+
+import com.example.edi.common.document.*;
+import java.util.List;
+
+public record PriorAuthBundle(
+        Encounter encounter,
+        Patient patient,
+        PatientInsurance insurance,
+        Payer payer,
+        Practice practice,
+        List<EncounterProcedure> authProcedures
+) {}
+```
+
+- [ ] **Step 12: Update PriorAuthService — fetch EncounterProcedures**
+
+In `backend/prior-auth-app/src/main/java/com/example/edi/priorauth/service/PriorAuthService.java`:
+
+Add `EncounterProcedureRepository` injection (field + constructor parameter).
+
+Replace the `requestedProcedures` block in `generatePriorAuth` with:
+
+```java
+List<EncounterProcedure> authProcedures = encounterProcedureRepository
+        .findByEncounterIdOrderByLineNumberAsc(encounterId).stream()
+        .filter(EncounterProcedure::isNeedsAuth)
+        .toList();
+
+bundles.add(new PriorAuthBundle(encounter, patient, insurance, payer, practice, authProcedures));
+```
+
+Remove the `RequestedProcedure` import.
+
+- [ ] **Step 13: Update EDI278Mapper**
+
+In `backend/prior-auth-app/src/main/java/com/example/edi/priorauth/service/EDI278Mapper.java`:
+
+Change the services mapping from `bundle.requestedProcedures()` to `bundle.authProcedures()`, and map from `EncounterProcedure` fields:
+
+```java
+List<ServiceReviewInfo> services = bundle.authProcedures().stream()
+        .map(ep -> new ServiceReviewInfo(
+                ep.getProcedureCode(), ep.getClinicalReason(), serviceDate))
+        .toList();
+```
+
+Replace the `RequestedProcedure`-related import with `EncounterProcedure`:
+```java
+import com.example.edi.common.document.EncounterProcedure;
+```
+
+- [ ] **Step 14: Update EDI278MapperTest**
+
+In `backend/prior-auth-app/src/test/java/com/example/edi/priorauth/service/EDI278MapperTest.java`:
+
+Replace `RequestedProcedure` usage with `EncounterProcedure`:
+
+```java
+EncounterProcedure proc = new EncounterProcedure();
+proc.setProcedureCode("99213");
+proc.setNeedsAuth(true);
+proc.setClinicalReason("Chronic pain management");
+proc.setLineNumber(1);
+proc.setUnits(1);
+proc.setUnitType("UN");
+proc.setChargeAmount(new java.math.BigDecimal("150.00"));
+proc.setModifiers(List.of());
+proc.setDiagnosisPointers(List.of(1));
+```
+
+Update the bundle construction:
+```java
+return new PriorAuthBundle(encounter, patient, insurance, payer, practice,
+        List.of(proc));
+```
+
+Remove `encounter.setRequestedProcedures(...)` call.
+
+- [ ] **Step 15: Build prior-auth-app**
+
+Run: `./gradlew :prior-auth-app:test`
+Expected: All tests PASS
+
+- [ ] **Step 16: Update frontend types**
+
+In `frontend/src/types/index.ts`:
+- Remove `RequestedProcedureResponse` interface
+- Remove `requestedProcedures: RequestedProcedureResponse[];` from `EncounterResponse`
+- Add `needsAuth: boolean;` and `clinicalReason: string | null;` to `ProcedureResponse`
+
+- [ ] **Step 17: Update prior-auth page**
+
+In `frontend/src/app/prior-auth/page.tsx`, update the "Requested Procedures" column to filter from `row.procedures`:
+
+```tsx
+{
+    header: "Needs Auth",
+    accessor: "procedures",
+    cell: (row) => {
+      const authProcs = (row.procedures ?? []).filter((p) => p.needsAuth);
+      return (
+        <div className="flex flex-wrap gap-1">
+          {authProcs.length > 0 ? (
+            authProcs.map((p) => (
+              <Badge
+                key={p.procedureCode}
+                variant="secondary"
+                className="bg-purple-500/10 text-purple-600 dark:text-purple-400"
+              >
+                {p.procedureCode}
+              </Badge>
+            ))
+          ) : (
+            <span className="text-xs text-muted-foreground">—</span>
+          )}
+        </div>
+      );
+    },
+},
+```
+
+- [ ] **Step 18: Build frontend**
+
+Run: `cd frontend && npm run build && npm run lint`
+Expected: Both pass
+
+- [ ] **Step 19: Full build verification**
+
+Run: `./gradlew build`
+Expected: BUILD SUCCESSFUL for all modules
+
+- [ ] **Step 20: Commit**
+
+```bash
+git add -A
+git commit -m "refactor: move prior auth fields from Encounter to EncounterProcedure
+
+Replace RequestedProcedure embedded list on Encounter with needsAuth and
+clinicalReason fields on EncounterProcedure. Procedures requiring prior
+auth are now flagged directly in the encounter_procedures collection."
+```
+
+---
+
+### Task 21: Full build verification
 
 - [ ] **Step 1: Run full backend build**
 
