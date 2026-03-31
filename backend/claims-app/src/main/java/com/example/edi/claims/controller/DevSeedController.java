@@ -200,6 +200,8 @@ public class DevSeedController {
         proc1a.setUnits(1);
         proc1a.setUnitType("UN");
         proc1a.setDiagnosisPointers(List.of(1, 2));
+        proc1a.setNeedsAuth(true);
+        proc1a.setClinicalReason("Acute upper respiratory infection follow-up");
         encounterProcedureRepository.save(proc1a);
 
         EncounterProcedure proc1b = new EncounterProcedure();
@@ -237,6 +239,8 @@ public class DevSeedController {
         proc2a.setUnits(1);
         proc2a.setUnitType("UN");
         proc2a.setDiagnosisPointers(List.of(1));
+        proc2a.setNeedsAuth(true);
+        proc2a.setClinicalReason("Chronic low back pain evaluation");
         encounterProcedureRepository.save(proc2a);
 
         EncounterProcedure proc2b = new EncounterProcedure();
@@ -248,6 +252,8 @@ public class DevSeedController {
         proc2b.setUnits(2);
         proc2b.setUnitType("UN");
         proc2b.setDiagnosisPointers(List.of(1));
+        proc2b.setNeedsAuth(true);
+        proc2b.setClinicalReason("Manual therapy for lumbar spine dysfunction");
         encounterProcedureRepository.save(proc2b);
 
         // Build response

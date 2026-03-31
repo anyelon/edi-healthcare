@@ -7,5 +7,7 @@ public record ProcedureResponse(
         String procedureCode,
         List<String> modifiers,
         BigDecimal chargeAmount,
-        int units
+        int units,
+        boolean needsAuth,
+        String clinicalReason
 ) {}

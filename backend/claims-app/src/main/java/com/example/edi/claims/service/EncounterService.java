@@ -81,7 +81,9 @@ public class EncounterService {
                             p.getProcedureCode(),
                             p.getModifiers(),
                             p.getChargeAmount(),
-                            p.getUnits()))
+                            p.getUnits(),
+                            p.isNeedsAuth(),
+                            p.getClinicalReason()))
                     .toList();
 
             return new EncounterResponse(

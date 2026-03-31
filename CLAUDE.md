@@ -146,6 +146,40 @@ specs/
 - All files for a spec (design doc, implementation plan, diagrams, mockups) go in the same folder
 - Never create specs outside of `specs/`
 
+## New Microservice Checklist
+
+When adding a new backend microservice, the following must ALL be addressed — not just the application code:
+
+1. **Gradle module** — `build.gradle`, register in `settings.gradle` with `projectDir` remapping
+2. **application-cloud.yml** — Cloud Spring profile for MongoDB URI from env var (see existing apps for pattern)
+3. **Dockerfile** — Multi-stage build (see existing `backend/*/Dockerfile` for pattern)
+4. **CI/CD workflow** (`.github/workflows/ci.yml`):
+   - Add app to `workflow_dispatch` options
+   - Add change detection path (`backend/<app-name>/`)
+   - Add deploy steps for both dev and prod environments
+5. **GCP Secret Manager secrets** — Create `<app>-api-url-dev` and `<app>-api-url-prod` secrets containing the Cloud Run service URL
+6. **Frontend deploy secrets** — Add the new `<APP>_API_URL=<app>-api-url-<env>:latest` to the frontend's `--set-secrets` in the CI/CD workflow (both dev and prod)
+
+Missing any of these steps will result in the service not being deployed or the frontend not being able to reach it in cloud environments.
+
+## Async Data Fetching
+
+When a service method needs to gather data from multiple independent sources (e.g., fetching Patient, Insurance, Payer, and Practice for the same encounter), use `CompletableFuture` to parallelize the repository calls instead of fetching sequentially. This reduces latency when building responses that combine multiple entities.
+
+```java
+CompletableFuture<Patient> patientFuture = CompletableFuture.supplyAsync(() ->
+        patientRepository.findById(encounter.getPatientId())
+                .orElseThrow(() -> new PatientNotFoundException(encounter.getPatientId())));
+CompletableFuture<Payer> payerFuture = CompletableFuture.supplyAsync(() ->
+        payerRepository.findById(insurance.getPayerId())
+                .orElseThrow(() -> new PayerNotFoundException(insurance.getPayerId())));
+
+Patient patient = patientFuture.join();
+Payer payer = payerFuture.join();
+```
+
+Apply this pattern in service orchestrators (e.g., `ClaimsService`, `PriorAuthService`) where multiple independent lookups are performed per entity.
+
 ## Spring Boot 4.x Notes
 
 - `@WebMvcTest` import: `org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest` (moved from `boot.test.autoconfigure.web.servlet`)

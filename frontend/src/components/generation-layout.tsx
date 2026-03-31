@@ -37,13 +37,17 @@ export function GenerationLayout({
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-            <Badge variant="outline">{badgeLabel}</Badge>
+        {title ? (
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+              <Badge variant="outline">{badgeLabel}</Badge>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-        </div>
+        ) : (
+          <div />
+        )}
         <div className="flex gap-2">
           <Button
             variant="outline"

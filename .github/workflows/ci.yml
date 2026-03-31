@@ -15,6 +15,7 @@ on:
           - claims-app
           - insurance-request-app
           - insurance-response-app
+          - prior-auth-app
           - frontend
           - all
       environment:
@@ -111,7 +112,7 @@ jobs:
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             APP="${{ github.event.inputs.app }}"
             if [[ "$APP" == "all" ]]; then
-              echo 'apps=["claims-app","insurance-request-app","insurance-response-app","frontend"]' >> "$GITHUB_OUTPUT"
+              echo 'apps=["claims-app","insurance-request-app","insurance-response-app","prior-auth-app","frontend"]' >> "$GITHUB_OUTPUT"
             else
               echo "apps=[\"$APP\"]" >> "$GITHUB_OUTPUT"
             fi
@@ -127,7 +128,7 @@ jobs:
 
           # Check if shared files changed (triggers all backend apps)
           if echo "$CHANGED_FILES" | grep -qE '^(backend/common/|build\.gradle|settings\.gradle|gradle/|gradle\.properties|\.github/workflows/)'; then
-            APPS=("claims-app" "insurance-request-app" "insurance-response-app")
+            APPS=("claims-app" "insurance-request-app" "insurance-response-app" "prior-auth-app")
           else
             if echo "$CHANGED_FILES" | grep -q '^backend/claims-app/'; then
               APPS+=("claims-app")
@@ -137,6 +138,9 @@ jobs:
             fi
             if echo "$CHANGED_FILES" | grep -q '^backend/insurance-response-app/'; then
               APPS+=("insurance-response-app")
+            fi
+            if echo "$CHANGED_FILES" | grep -q '^backend/prior-auth-app/'; then
+              APPS+=("prior-auth-app")
             fi
           fi
 
@@ -275,7 +279,7 @@ jobs:
             --region ${{ env.GCP_REGION }} \
             --project ${{ env.GCP_PROJECT_DEV }} \
             --platform managed \
-            --set-secrets "CLAIMS_API_URL=claims-api-url-dev:latest,REQUEST_API_URL=request-api-url-dev:latest,RESPONSE_API_URL=response-api-url-dev:latest" \
+            --set-secrets "CLAIMS_API_URL=claims-api-url-dev:latest,REQUEST_API_URL=request-api-url-dev:latest,RESPONSE_API_URL=response-api-url-dev:latest,PRIOR_AUTH_API_URL=prior-auth-api-url-dev:latest" \
             --memory 256Mi \
             --cpu 1 \
             --min-instances 0 \
@@ -345,7 +349,7 @@ jobs:
             --region ${{ env.GCP_REGION }} \
             --project ${{ env.GCP_PROJECT_PROD }} \
             --platform managed \
-            --set-secrets "CLAIMS_API_URL=claims-api-url-prod:latest,REQUEST_API_URL=request-api-url-prod:latest,RESPONSE_API_URL=response-api-url-prod:latest" \
+            --set-secrets "CLAIMS_API_URL=claims-api-url-prod:latest,REQUEST_API_URL=request-api-url-prod:latest,RESPONSE_API_URL=response-api-url-prod:latest,PRIOR_AUTH_API_URL=prior-auth-api-url-prod:latest" \
             --memory 256Mi \
             --cpu 1 \
             --min-instances 0 \

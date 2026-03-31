@@ -1,0 +1,10 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  data:
+    mongodb:
+      uri: "${MONGODB_URI}"
+      database: ${MONGODB_DATABASE:edi_healthcare}
+  mongodb:
+    uri: "${MONGODB_URI}"
