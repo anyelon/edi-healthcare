@@ -115,6 +115,11 @@ Controller → Service → Repository (common) + EDI Service
 - EDI services (`EDI837Service`, `EDI270Service`, `EDI271Service`) are pure business logic — no repository access
 - `@EnableMongoRepositories` lives in each app's `config/MongoConfig.java` (separated from `@SpringBootApplication` for clean `@WebMvcTest` slicing)
 
+## Development Approach
+
+- Always use Test-Driven Development (TDD): write failing tests first, then implement the minimum code to make them pass, then refactor
+- Never commit directly to main — always use feature branches
+
 ## Conventions
 
 - Constructor injection only (no `@Autowired` on fields)
