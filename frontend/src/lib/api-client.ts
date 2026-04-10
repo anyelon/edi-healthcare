@@ -1,4 +1,4 @@
-import type { SeedResult, EligibilityResponse, EncounterResponse, PatientResponse, PriorAuthResponse } from "@/types";
+import type { SeedResult, EligibilityResponse, EncounterResponse, PatientResponse, PriorAuthResponse, EDI999Acknowledgment } from "@/types";
 
 export async function seedDatabase(): Promise<SeedResult> {
   const res = await fetch("/api/dev/seed", { method: "POST" });
@@ -77,6 +77,20 @@ export async function parsePriorAuthResponse(
   });
   if (!res.ok)
     throw new Error(`Prior auth response parsing failed: ${res.statusText}`);
+  return res.json();
+}
+
+export async function parseAcknowledgment(
+  file: File
+): Promise<EDI999Acknowledgment[]> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch("/api/insurance/acknowledgment", {
+    method: "POST",
+    body: formData,
+  });
+  if (!res.ok)
+    throw new Error(`Acknowledgment parsing failed: ${res.statusText}`);
   return res.json();
 }
 
