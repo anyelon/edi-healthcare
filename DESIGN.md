@@ -1,18 +1,18 @@
 ---
-name: Precision Billing System
+name: Precision Billing
 colors:
-  surface: '#fbf8ff'
-  surface-dim: '#dad9e3'
-  surface-bright: '#fbf8ff'
+  surface: '#fcf8fa'
+  surface-dim: '#dcd9db'
+  surface-bright: '#fcf8fa'
   surface-container-lowest: '#ffffff'
-  surface-container-low: '#f4f2fd'
-  surface-container: '#eeedf7'
-  surface-container-high: '#e8e7f1'
-  surface-container-highest: '#e3e1ec'
-  on-surface: '#1a1b22'
+  surface-container-low: '#f6f3f5'
+  surface-container: '#f0edef'
+  surface-container-high: '#eae7e9'
+  surface-container-highest: '#e4e2e4'
+  on-surface: '#1b1b1d'
   on-surface-variant: '#45464d'
-  inverse-surface: '#2f3038'
-  inverse-on-surface: '#f1effa'
+  inverse-surface: '#303032'
+  inverse-on-surface: '#f3f0f2'
   outline: '#76777d'
   outline-variant: '#c6c6cd'
   surface-tint: '#565e74'
@@ -27,8 +27,8 @@ colors:
   on-secondary-container: '#fefcff'
   tertiary: '#000000'
   on-tertiary: '#ffffff'
-  tertiary-container: '#00201d'
-  on-tertiary-container: '#0c9488'
+  tertiary-container: '#271901'
+  on-tertiary-container: '#98805d'
   error: '#ba1a1a'
   on-error: '#ffffff'
   error-container: '#ffdad6'
@@ -41,53 +41,51 @@ colors:
   secondary-fixed-dim: '#b4c5ff'
   on-secondary-fixed: '#00174b'
   on-secondary-fixed-variant: '#003ea8'
-  tertiary-fixed: '#89f5e7'
-  tertiary-fixed-dim: '#6bd8cb'
-  on-tertiary-fixed: '#00201d'
-  on-tertiary-fixed-variant: '#005049'
-  background: '#fbf8ff'
-  on-background: '#1a1b22'
-  surface-variant: '#e3e1ec'
+  tertiary-fixed: '#fcdeb5'
+  tertiary-fixed-dim: '#dec29a'
+  on-tertiary-fixed: '#271901'
+  on-tertiary-fixed-variant: '#574425'
+  background: '#fcf8fa'
+  on-background: '#1b1b1d'
+  surface-variant: '#e4e2e4'
 typography:
   h1:
-    fontFamily: Public Sans
-    fontSize: 30px
+    fontFamily: Manrope
+    fontSize: 32px
     fontWeight: '700'
-    lineHeight: 36px
+    lineHeight: 40px
     letterSpacing: -0.02em
   h2:
-    fontFamily: Public Sans
+    fontFamily: Manrope
     fontSize: 24px
     fontWeight: '600'
     lineHeight: 32px
     letterSpacing: -0.01em
   h3:
-    fontFamily: Public Sans
+    fontFamily: Manrope
     fontSize: 20px
     fontWeight: '600'
     lineHeight: 28px
-  body-base:
-    fontFamily: Public Sans
+  body-lg:
+    fontFamily: Inter
     fontSize: 16px
     fontWeight: '400'
     lineHeight: 24px
-  body-sm:
-    fontFamily: Public Sans
+  body-md:
+    fontFamily: Inter
     fontSize: 14px
     fontWeight: '400'
     lineHeight: 20px
-  data-mono:
-    fontFamily: Public Sans
-    fontSize: 14px
-    fontWeight: '500'
-    lineHeight: 20px
-    letterSpacing: 0.01em
-  label-caps:
-    fontFamily: Public Sans
+  label-md:
+    fontFamily: Inter
     fontSize: 12px
-    fontWeight: '700'
+    fontWeight: '600'
     lineHeight: 16px
-    letterSpacing: 0.05em
+  table-data:
+    fontFamily: Inter
+    fontSize: 13px
+    fontWeight: '400'
+    lineHeight: 18px
 rounded:
   sm: 0.125rem
   DEFAULT: 0.25rem
@@ -96,67 +94,60 @@ rounded:
   xl: 0.75rem
   full: 9999px
 spacing:
-  container-margin: 2rem
-  gutter: 1rem
-  section-gap: 2rem
-  component-padding-x: 1rem
-  component-padding-y: 0.75rem
-  density-compact: 0.5rem
-  density-comfortable: 1rem
+  unit: 4px
+  xs: 4px
+  sm: 8px
+  md: 16px
+  lg: 24px
+  xl: 32px
+  container-margin: 40px
+  gutter: 20px
 ---
 
 ## Brand & Style
+The design system is engineered for the high-stakes environment of healthcare financial management. It prioritizes clarity, institutional trust, and meticulous organization to reduce cognitive load for billing administrators and healthcare providers. 
 
-This design system is engineered for the high-stakes environment of US healthcare finance. The brand personality is rooted in **Precision, Reliability, and Transparency**. It must facilitate the rapid processing of complex insurance claims and patient billing while maintaining an atmosphere of calm authority.
-
-The aesthetic follows a **Corporate Modern** approach with **Minimalist** leanings. By prioritizing functional clarity over decorative elements, the system reduces cognitive load for billing specialists. The interface utilizes a "Data-First" philosophy, ensuring that critical fiscal information is never obscured. High-density information is managed through rigorous alignment and a restrained color application that highlights actionable discrepancies.
+The aesthetic follows a **Corporate / Modern** style, utilizing a disciplined grid, generous whitespace, and a restrained color palette. This approach ensures that complex data sets—such as patient ledgers and insurance claims—remain legible and actionable. The interface should feel like a precise instrument: reliable, responsive, and authoritative.
 
 ## Colors
+The color strategy employs a deep Navy (#0F172A) as the Primary foundation to evoke stability and institutional authority. A vibrant Blue (#2563EB) serves as the Secondary color for primary actions, links, and active states, providing a clear path for user interaction.
 
-The palette is anchored by the neutrals provided in the brand profile, supplemented with a professional "Healthcare Blue" spectrum. 
+Semantic tokens are strictly mapped to billing statuses to ensure immediate visual recognition:
+- **Paid**: Utilizes Success Green (#10B981), signaling completed transactions.
+- **Pending**: Utilizes Warning Amber (#F59E0B), signaling items requiring attention or processing.
+- **Overdue**: Utilizes Error Red (#EF4444), signaling urgent priority and financial risk.
 
-- **Primary & Secondary:** A deep Navy (#0F172A) provides institutional weight for navigation and headings, while a vibrant blue (#2563EB) is reserved for primary actions and interactive states.
-- **Neutrals:** We utilize the extracted #71717A for secondary text and borders, ensuring a soft but legible contrast. #F9FAFB is the standard background for grouping elements like cards or sidebar containers.
-- **Functional Status:** Crucial for billing, these colors are highly saturated to ensure "Overdue" (Error), "Pending" (Warning), and "Paid" (Success) statuses are immediately identifiable in dense tables.
+The background uses a subtle off-white (#F8FAFC) to reduce screen glare during extended use, while borders use a soft Slate (#E2E8F0) to define structure without adding visual noise.
 
 ## Typography
+This design system utilizes a dual-font pairing to balance modern refinement with utilitarian efficiency. **Manrope** is used for headlines to provide a sophisticated, professional character. **Inter** is used for all body text, tabular data, and labels due to its exceptional legibility at small sizes and its neutral, systematic feel.
 
-**Public Sans** is selected for its institutional clarity and exceptional legibility in data-heavy contexts. It provides a neutral, authoritative tone required for healthcare administration.
-
-- **Data Clarity:** For monetary values and CPT codes, use the `data-mono` style. While not a true monospace, Public Sans's tabular figures ensure that numbers align vertically in columns.
-- **Hierarchy:** Use `label-caps` for table headers and section overlines to differentiate metadata from primary content.
-- **Readability:** Body text is set with a slightly increased line height (1.5x) to prevent "text-walling" in patient notes or insurance policy descriptions.
+For financial tables, maintain a 13px font size for data rows to maximize information density without sacrificing readability. Use semi-bold weights for labels and headers to create a clear typographic hierarchy.
 
 ## Layout & Spacing
+The layout follows a **Fixed Grid** model for desktop dashboards to ensure data columns remain predictable and aligned across different modules. A 12-column grid is standard, with 40px outer margins and 20px gutters.
 
-The system employs a **12-column fluid grid** with fixed sidebars. The layout is designed to maximize "above-the-fold" visibility for claim summaries.
-
-- **Grid:** Use a 16px (1rem) base unit for the spacing rhythm. 
-- **Density Toggles:** Because billing users often work with hundreds of rows, the system supports a "Compact" mode. In this mode, vertical padding in tables and lists is reduced from 0.75rem to 0.25rem.
-- **Alignment:** All data points must be top-aligned in rows to maintain a consistent scanning baseline across heterogeneous content (e.g., a row containing both a multi-line address and a single-line dollar amount).
+The spacing rhythm is based on a 4px baseline unit. Internal component padding should strictly adhere to these increments (e.g., 8px for tight groupings, 16px for standard card padding) to maintain a cohesive, rhythmic feel throughout the application.
 
 ## Elevation & Depth
+To maintain a high-trust, professional aesthetic, this design system avoids heavy shadows. Instead, it utilizes **Tonal Layers** and **Low-Contrast Outlines**.
 
-To maintain a "clean healthcare" feel, this design system avoids heavy shadows. Instead, it uses **Tonal Layers** and **Low-Contrast Outlines** to create depth.
+Depth is communicated through:
+- **Level 0 (Background)**: #F8FAFC.
+- **Level 1 (Cards/Surface)**: White background with a 1px border (#E2E8F0).
+- **Level 2 (Modals/Popovers)**: White background with a soft, diffused shadow (0px 4px 12px rgba(15, 23, 42, 0.08)) to indicate temporary interaction layers.
 
-- **Surface Levels:** The primary background is #FFFFFF. Secondary containers (like sidebars or card backgrounds) use #F9FAFB. 
-- **Borders:** Use 1px borders in #E4E4E7 (Zinc-200) for card containers and table row separators.
-- **Active Elevation:** Only use ambient shadows (e.g., `box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1)`) for temporary overlays like dropdown menus or modals. This keeps the main workspace feeling flat and focused.
+This flat-but-layered approach ensures the UI feels modern and clean, avoiding the "clutter" often associated with older healthcare software.
 
 ## Shapes
+The shape language is **Soft** (roundedness: 1). This involves a standard 0.25rem (4px) corner radius for most UI elements like input fields and buttons. Larger components, such as dashboard cards, may use a 0.5rem (8px) radius. 
 
-The shape language is **Soft (0.25rem)**. This provides a professional, "standardized" appearance that feels modern without appearing overly "bubbly" or consumer-oriented.
-
-- **Buttons & Inputs:** Standardized at 4px (0.25rem) corner radius.
-- **Large Containers:** Cards and Modals may use up to 8px (0.5rem) to provide a clear visual distinction from the background.
-- **Status Badges:** Use a fully rounded (pill) shape to differentiate status indicators from interactive buttons.
+These subtle curves soften the technical nature of billing data, making the software feel approachable while maintaining the structural integrity of a professional tool.
 
 ## Components
-
-Following Shadcn UI patterns, components are functional and unadorned.
-
-- **Data Tables:** The core of the application. Headers should be sticky, with "Primary Blue" indicators for sorted columns. Include a "Bulk Action" bar that appears at the bottom of the viewport when rows are selected.
-- **Status Badges:** Use a light tinted background of the status color (e.g., 10% opacity) with a high-contrast text color for maximum readability.
-- **Input Fields:** Use a clear focus ring in `secondary_color_hex` (Blue). Error states must include both a red border and a trailing error icon for accessibility.
-- **Summary Cards:** Used at the top of dashboards to show "Total Outstanding," "Net Collection Rate," etc. These use `h1` typography for the metric and `label-caps` for the description.
-- **Fiscal Inputs:** Currency inputs should always include a fixed "$" prefix icon and right-aligned text to mimic accounting standards.
+- **Buttons**: Primary buttons use the Navy background with white text. Secondary buttons use a transparent background with a Navy border and text. Ghost buttons use Blue text for subtle actions.
+- **Status Chips**: Use high-contrast combinations. For 'Paid', use a light green background with dark green text. For 'Overdue', use a light red background with dark red text.
+- **Input Fields**: Use a 1px border (#E2E8F0). On focus, the border shifts to Blue (#2563EB) with a soft 2px glow.
+- **Data Tables**: Use subtle alternating row stripes or clear divider lines. Headers should be sticky with a Manrope semi-bold label.
+- **Cards**: All data summary containers should have a 1px border and no shadow, unless they are being actively hovered.
+- **Search & Filters**: Positioned at the top of data views, using consistent 8px spacing between elements to create a compact, efficient "Control Bar."
