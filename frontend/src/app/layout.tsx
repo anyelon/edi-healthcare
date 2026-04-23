@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { Toaster, inter, manrope } from "@/design-system";
-import { SidebarInset, SidebarProvider } from "@/design-system";
+import { Toaster, inter, manrope, SidebarInset, SidebarProvider } from "@/design-system";
 import { AppSidebar } from "@/components/app-sidebar";
 import "./globals.css";
 

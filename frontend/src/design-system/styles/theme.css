@@ -123,6 +123,12 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
+  /* Radius scale — aliases that primitives reference via var(--radius-*) */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+
   /* Spacing utilities (additive to Tailwind's numeric scale) */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
