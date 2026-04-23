@@ -51,6 +51,7 @@ function Badge({
     state: {
       slot: "badge",
       variant,
+      shape,
     },
   })
 }
