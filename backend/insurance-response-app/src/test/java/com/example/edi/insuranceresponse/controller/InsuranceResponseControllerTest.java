@@ -1,8 +1,15 @@
 package com.example.edi.insuranceresponse.controller;
 
 import com.example.edi.common.document.EligibilityResponse;
+import com.example.edi.common.edi.ack.EDI999Acknowledgment;
+import com.example.edi.common.edi.ack.FunctionalGroupStatus;
+import com.example.edi.common.edi.ack.TransactionSetStatus;
+import com.example.edi.common.edi.loop.InterchangeEnvelope;
+import com.example.edi.common.edi.loop.FunctionalGroup;
 import com.example.edi.common.exception.EdiParseException;
+import com.example.edi.insuranceresponse.service.EDI999Service;
 import com.example.edi.insuranceresponse.service.EligibilityResponseService;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -23,6 +30,9 @@ class InsuranceResponseControllerTest {
 
     @MockitoBean
     private EligibilityResponseService eligibilityResponseService;
+
+    @MockitoBean
+    private EDI999Service edi999Service;
 
     @Test
     void processEligibilityResponse_validFile_returns200() throws Exception {
@@ -57,5 +67,39 @@ class InsuranceResponseControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
                 .andExpect(jsonPath("$.message").value("Failed to parse EDI 271 file"));
+    }
+
+    @Test
+    void processAcknowledgment_validFile_returns200() throws Exception {
+        var envelope = new InterchangeEnvelope("ZZ", "CLEARINGHOUSE01", "ZZ", "SENDER12345",
+                "260401", "1200", "000000001", "0", "T");
+        var group = new FunctionalGroup("CLEARINGHOUSE01", "SENDER12345", "20260401", "1200", "1");
+        var ack = new EDI999Acknowledgment(envelope, group, "1", "837", "0001",
+                TransactionSetStatus.ACCEPTED, FunctionalGroupStatus.ACCEPTED,
+                1, 1, 1, List.of());
+
+        when(edi999Service.processFile(any())).thenReturn(List.of(ack));
+
+        MockMultipartFile file = new MockMultipartFile("file", "999_ack.edi",
+                "text/plain", "AK1*HC*1~".getBytes());
+
+        mockMvc.perform(multipart("/api/insurance/acknowledgment").file(file))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("application/json"))
+                .andExpect(jsonPath("$[0].transactionStatus").value("ACCEPTED"))
+                .andExpect(jsonPath("$[0].acknowledgedTransactionSetId").value("837"));
+    }
+
+    @Test
+    void processAcknowledgment_parseError_returns400() throws Exception {
+        when(edi999Service.processFile(any()))
+                .thenThrow(new EdiParseException("Failed to parse EDI 999 file", null));
+
+        MockMultipartFile file = new MockMultipartFile("file", "bad_999.edi",
+                "text/plain", "INVALID EDI".getBytes());
+
+        mockMvc.perform(multipart("/api/insurance/acknowledgment").file(file))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("BAD_REQUEST"));
     }
 }
