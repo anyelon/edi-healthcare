@@ -1,4 +1,3 @@
-// frontend/src/design-system/components/summary-card.tsx
 import * as React from "react";
 import { Card } from "../primitives/card";
 import { cn } from "../utils/cn";

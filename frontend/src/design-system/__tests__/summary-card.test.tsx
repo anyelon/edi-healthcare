@@ -1,4 +1,3 @@
-// frontend/src/design-system/__tests__/summary-card.test.tsx
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { SummaryCard } from "@/design-system";

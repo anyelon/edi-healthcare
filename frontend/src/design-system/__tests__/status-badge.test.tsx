@@ -1,4 +1,3 @@
-// frontend/src/design-system/__tests__/status-badge.test.tsx
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { StatusBadge } from "@/design-system";
