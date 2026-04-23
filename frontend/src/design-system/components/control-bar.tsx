@@ -6,7 +6,7 @@ export type ControlBarProps = React.HTMLAttributes<HTMLDivElement>;
 export function ControlBar({ className, ...props }: ControlBarProps) {
   return (
     <div
-      className={cn("flex flex-wrap items-center gap-sm", className)}
+      className={cn("flex flex-wrap items-center gap-ds-sm", className)}
       {...props}
     />
   );

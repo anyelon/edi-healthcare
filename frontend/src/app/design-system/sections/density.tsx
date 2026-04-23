@@ -23,9 +23,9 @@ export function DensityPreview() {
   const [sel, setSel] = useState<Set<string>>(new Set());
 
   return (
-    <div className="flex flex-col gap-lg">
+    <div className="flex flex-col gap-ds-lg">
       <h2 className="text-h2 font-[family-name:var(--font-heading)]">Density</h2>
-      <div className="flex gap-sm">
+      <div className="flex gap-ds-sm">
         <Button
           variant={density === "comfortable" ? "default" : "outline"}
           onClick={() => setDensity("comfortable")}

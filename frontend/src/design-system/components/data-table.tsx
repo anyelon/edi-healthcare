@@ -147,13 +147,13 @@ export function DataTable<T>({
       </div>
       {bulkActions && selectedIds.size > 0 ? (
         <div
-          className="sticky bottom-0 z-10 mt-sm flex items-center justify-between rounded-lg border bg-card p-sm"
+          className="sticky bottom-0 z-10 mt-ds-sm flex items-center justify-between rounded-lg border bg-card p-ds-sm"
           style={{ boxShadow: "var(--ds-shadow-popover)" }}
         >
           <span className="text-body-md text-muted-foreground">
             {selectedIds.size} selected
           </span>
-          <div className="flex items-center gap-sm">{bulkActions}</div>
+          <div className="flex items-center gap-ds-sm">{bulkActions}</div>
         </div>
       ) : null}
     </>

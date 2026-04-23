@@ -6,8 +6,8 @@ import { DensityPreview } from "./sections/density";
 
 export default function DesignSystemPage() {
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-xl py-lg">
-      <header className="flex flex-col gap-xs">
+    <div className="mx-auto flex max-w-5xl flex-col gap-ds-xl py-ds-lg">
+      <header className="flex flex-col gap-ds-xs">
         <p className="text-label-md uppercase tracking-wider text-muted-foreground">
           Internal
         </p>
@@ -17,7 +17,7 @@ export default function DesignSystemPage() {
         <p className="text-body-lg text-muted-foreground">
           Source of truth: DESIGN.md and specs/012-design-system.
         </p>
-        <nav className="mt-sm flex flex-wrap gap-sm text-body-md text-ds-secondary">
+        <nav className="mt-ds-sm flex flex-wrap gap-ds-sm text-body-md text-ds-secondary">
           <a href="#foundations">Foundations</a>
           <a href="#primitives">Primitives</a>
           <a href="#components">Components</a>

@@ -54,14 +54,14 @@ const radiusStops = [
 
 export function Foundations() {
   return (
-    <div className="flex flex-col gap-lg">
+    <div className="flex flex-col gap-ds-lg">
       <h2 className="text-h2 font-[family-name:var(--font-heading)]">Foundations</h2>
 
       <div>
-        <h3 className="text-h3 mb-sm font-[family-name:var(--font-heading)]">Core palette</h3>
-        <div className="grid grid-cols-4 gap-sm">
+        <h3 className="text-h3 mb-ds-sm font-[family-name:var(--font-heading)]">Core palette</h3>
+        <div className="grid grid-cols-4 gap-ds-sm">
           {coreSwatches.map((s) => (
-            <div key={s.name} className="flex flex-col gap-xs">
+            <div key={s.name} className="flex flex-col gap-ds-xs">
               <div
                 className="h-16 w-full rounded border"
                 style={{ background: `var(${s.var})` }}
@@ -74,8 +74,8 @@ export function Foundations() {
       </div>
 
       <div>
-        <h3 className="text-h3 mb-sm font-[family-name:var(--font-heading)]">Tonal ladder</h3>
-        <div className="flex gap-xs">
+        <h3 className="text-h3 mb-ds-sm font-[family-name:var(--font-heading)]">Tonal ladder</h3>
+        <div className="flex gap-ds-xs">
           {tonalSwatches.map((v) => (
             <div
               key={v}
@@ -88,10 +88,10 @@ export function Foundations() {
       </div>
 
       <div>
-        <h3 className="text-h3 mb-sm font-[family-name:var(--font-heading)]">Status</h3>
-        <div className="grid grid-cols-3 gap-sm">
+        <h3 className="text-h3 mb-ds-sm font-[family-name:var(--font-heading)]">Status</h3>
+        <div className="grid grid-cols-3 gap-ds-sm">
           {statusSwatches.map((s) => (
-            <div key={s.name} className="flex flex-col gap-xs">
+            <div key={s.name} className="flex flex-col gap-ds-xs">
               <div className="flex h-10 rounded border">
                 <div className="flex-1" style={{ background: `var(${s.solid})` }} />
                 <div className="flex-1" style={{ background: `var(${s.bg})` }} />
@@ -104,10 +104,10 @@ export function Foundations() {
       </div>
 
       <div>
-        <h3 className="text-h3 mb-sm font-[family-name:var(--font-heading)]">Typography</h3>
-        <div className="flex flex-col gap-sm">
+        <h3 className="text-h3 mb-ds-sm font-[family-name:var(--font-heading)]">Typography</h3>
+        <div className="flex flex-col gap-ds-sm">
           {typeSamples.map((t) => (
-            <div key={t.name} className="flex items-baseline gap-md">
+            <div key={t.name} className="flex items-baseline gap-ds-md">
               <span className="w-28 text-label-md text-muted-foreground uppercase tracking-wider">
                 {t.name}
               </span>
@@ -118,10 +118,10 @@ export function Foundations() {
       </div>
 
       <div>
-        <h3 className="text-h3 mb-sm font-[family-name:var(--font-heading)]">Spacing</h3>
-        <div className="flex flex-col gap-xs">
+        <h3 className="text-h3 mb-ds-sm font-[family-name:var(--font-heading)]">Spacing</h3>
+        <div className="flex flex-col gap-ds-xs">
           {spacingRow.map((s) => (
-            <div key={s.name} className="flex items-center gap-md">
+            <div key={s.name} className="flex items-center gap-ds-md">
               <span className="w-40 text-label-md text-muted-foreground">{s.name} ({s.value})</span>
               <div className={`${s.cls} h-2 rounded bg-ds-primary`} />
             </div>
@@ -130,10 +130,10 @@ export function Foundations() {
       </div>
 
       <div>
-        <h3 className="text-h3 mb-sm font-[family-name:var(--font-heading)]">Radius</h3>
-        <div className="flex items-end gap-sm">
+        <h3 className="text-h3 mb-ds-sm font-[family-name:var(--font-heading)]">Radius</h3>
+        <div className="flex items-end gap-ds-sm">
           {radiusStops.map((r) => (
-            <div key={r.name} className="flex flex-col items-center gap-xs">
+            <div key={r.name} className="flex flex-col items-center gap-ds-xs">
               <div className={`h-16 w-16 border ${r.cls} bg-card`} />
               <span className="text-label-md text-muted-foreground">{r.name}</span>
             </div>
@@ -142,11 +142,11 @@ export function Foundations() {
       </div>
 
       <div>
-        <h3 className="text-h3 mb-sm font-[family-name:var(--font-heading)]">Elevation</h3>
-        <div className="flex gap-md">
-          <div className="h-24 w-48 rounded-lg border bg-card p-sm">Level 1 — card</div>
+        <h3 className="text-h3 mb-ds-sm font-[family-name:var(--font-heading)]">Elevation</h3>
+        <div className="flex gap-ds-md">
+          <div className="h-24 w-48 rounded-lg border bg-card p-ds-sm">Level 1 — card</div>
           <div
-            className="h-24 w-48 rounded-lg border bg-card p-sm"
+            className="h-24 w-48 rounded-lg border bg-card p-ds-sm"
             style={{ boxShadow: "var(--ds-shadow-popover)" }}
           >
             Level 2 — popover

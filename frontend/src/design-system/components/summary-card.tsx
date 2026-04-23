@@ -26,7 +26,7 @@ export function SummaryCard({
   ...props
 }: SummaryCardProps) {
   return (
-    <Card className={cn("p-md flex flex-col gap-xs", className)} {...props}>
+    <Card className={cn("p-ds-md flex flex-col gap-ds-xs", className)} {...props}>
       <span className="text-label-md uppercase tracking-wider text-muted-foreground">
         {label}
       </span>

@@ -129,12 +129,14 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) * 1.4);
 
-  /* Spacing utilities (additive to Tailwind's numeric scale) */
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
+  /* Spacing utilities (additive to Tailwind's numeric scale).
+   * Prefixed with ds- to avoid collision with Tailwind's --container-* keys
+   * (xs/sm/md/lg/xl) used by max-w-*, w-*, h-*, size-*, etc. */
+  --spacing-ds-xs: 4px;
+  --spacing-ds-sm: 8px;
+  --spacing-ds-md: 16px;
+  --spacing-ds-lg: 24px;
+  --spacing-ds-xl: 32px;
   --spacing-gutter: 20px;
   --spacing-container-margin: 40px;
 

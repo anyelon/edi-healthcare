@@ -35,12 +35,12 @@ export function ComponentsPreview() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   return (
-    <div className="flex flex-col gap-lg">
+    <div className="flex flex-col gap-ds-lg">
       <h2 className="text-h2 font-[family-name:var(--font-heading)]">Components</h2>
 
       <div>
-        <h3 className="text-h3 mb-sm font-[family-name:var(--font-heading)]">StatusBadge</h3>
-        <div className="flex gap-sm">
+        <h3 className="text-h3 mb-ds-sm font-[family-name:var(--font-heading)]">StatusBadge</h3>
+        <div className="flex gap-ds-sm">
           <StatusBadge variant="paid">Paid</StatusBadge>
           <StatusBadge variant="pending">Pending</StatusBadge>
           <StatusBadge variant="overdue">Overdue</StatusBadge>
@@ -49,8 +49,8 @@ export function ComponentsPreview() {
       </div>
 
       <div>
-        <h3 className="text-h3 mb-sm font-[family-name:var(--font-heading)]">SummaryCard</h3>
-        <div className="grid grid-cols-3 gap-md">
+        <h3 className="text-h3 mb-ds-sm font-[family-name:var(--font-heading)]">SummaryCard</h3>
+        <div className="grid grid-cols-3 gap-ds-md">
           <SummaryCard label="Total Outstanding" metric="$127,430.00" delta="+2.4%" trend="up" />
           <SummaryCard label="Collected MTD"      metric="$84,120.00"  delta="-1.1%" trend="down" />
           <SummaryCard label="Net Collection Rate" metric="96.2%" />
@@ -58,19 +58,19 @@ export function ComponentsPreview() {
       </div>
 
       <div>
-        <h3 className="text-h3 mb-sm font-[family-name:var(--font-heading)]">FiscalInput</h3>
+        <h3 className="text-h3 mb-ds-sm font-[family-name:var(--font-heading)]">FiscalInput</h3>
         <div className="max-w-xs">
           <FiscalInput value={amount} onValueChange={setAmount} aria-label="Fiscal amount" />
         </div>
       </div>
 
       <div>
-        <h3 className="text-h3 mb-sm font-[family-name:var(--font-heading)]">ControlBar + DataTable</h3>
+        <h3 className="text-h3 mb-ds-sm font-[family-name:var(--font-heading)]">ControlBar + DataTable</h3>
         <ControlBar>
           <Input placeholder="Search claims…" className="max-w-xs" />
           <Button variant="outline">Filter</Button>
         </ControlBar>
-        <div className="mt-sm">
+        <div className="mt-ds-sm">
           <DataTable
             columns={columns}
             data={claims}
