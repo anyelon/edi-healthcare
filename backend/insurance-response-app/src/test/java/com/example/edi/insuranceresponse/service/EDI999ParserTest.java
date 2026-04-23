@@ -2,7 +2,9 @@ package com.example.edi.insuranceresponse.service;
 
 import com.example.edi.common.edi.ack.EDI999Acknowledgment;
 import com.example.edi.common.edi.ack.FunctionalGroupStatus;
+import com.example.edi.common.edi.ack.SegmentError;
 import com.example.edi.common.edi.ack.TransactionSetStatus;
+import com.example.edi.common.exception.EdiParseException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -147,6 +149,45 @@ class EDI999ParserTest {
         InputStream input = new ByteArrayInputStream("NOT EDI DATA".getBytes(StandardCharsets.UTF_8));
         assertThatThrownBy(() -> parser.parse(input))
                 .isInstanceOf(RuntimeException.class);
+    }
+
+    @Test
+    void parse_multipleIK4sPerIK3_createsOneErrorPerIK4() throws Exception {
+        InputStream input = loadResource("edi/999_multiple_element_errors.edi");
+        List<EDI999Acknowledgment> results = parser.parse(input);
+        EDI999Acknowledgment ack = results.getFirst();
+        assertThat(ack.errors()).hasSize(2);
+        SegmentError first = ack.errors().get(0);
+        assertThat(first.segmentId()).isEqualTo("CLM");
+        assertThat(first.segmentPosition()).isEqualTo(22);
+        assertThat(first.segmentErrorCode()).isEqualTo("8");
+        assertThat(first.elementPosition()).isEqualTo(1);
+        assertThat(first.elementErrorCode()).isEqualTo("1");
+        SegmentError second = ack.errors().get(1);
+        assertThat(second.segmentId()).isEqualTo("CLM");
+        assertThat(second.segmentPosition()).isEqualTo(22);
+        assertThat(second.segmentErrorCode()).isEqualTo("8");
+        assertThat(second.elementPosition()).isEqualTo(2);
+        assertThat(second.elementErrorCode()).isEqualTo("6");
+    }
+
+    @Test
+    void parse_missingAK9_throwsEdiParseException() {
+        InputStream input = getClass().getClassLoader().getResourceAsStream("edi/999_missing_ak9.edi");
+        assertThatThrownBy(() -> parser.parse(input))
+                .isInstanceOf(EdiParseException.class)
+                .hasMessageContaining("AK9");
+    }
+
+    @Test
+    void parse_ik3WithoutIk4_hasNullElementErrorCode() throws Exception {
+        InputStream input = loadResource("edi/999_rejected.edi");
+        List<EDI999Acknowledgment> results = parser.parse(input);
+        // errors[1] is NM1 with no IK4 - bare segment error
+        SegmentError bareError = results.getFirst().errors().get(1);
+        assertThat(bareError.segmentId()).isEqualTo("NM1");
+        assertThat(bareError.elementPosition()).isZero();
+        assertThat(bareError.elementErrorCode()).isNull();
     }
 
     private InputStream loadResource(String path) {

@@ -51,10 +51,16 @@ public class EDI999Parser {
             String currentAk2TransactionSetId = "";
             String currentAk2ControlNumber = "";
 
-            // IK3 - pending segment error being built
+            // IK3 - segment error fields captured during ELEMENT_DATA
             String ik3SegmentId = "";
             int ik3SegmentPosition = 0;
             String ik3SegmentErrorCode = "";
+
+            // Snapshot of the current IK3 waiting to be emitted. If an IK4 follows, one error
+            // is emitted per IK4 carrying this IK3's segment data. If no IK4 follows, the
+            // snapshot is emitted as a bare segment error when the next IK3 or IK5 is seen.
+            SegmentError pendingBareError = null;
+            boolean currentIk3HasIk4 = false;
 
             // IK4 - element error data (captured during ELEMENT_DATA, applied at IK4 END_SEGMENT)
             int ik4ElementPosition = 0;
@@ -150,34 +156,39 @@ public class EDI999Parser {
                     }
                     case END_SEGMENT -> {
                         if ("IK3".equals(currentSegment)) {
-                            // Finalize IK3 with no element error (IK4 not yet seen)
-                            // If IK4 follows, we will replace the last error with element info
-                            currentErrors.add(new SegmentError(
+                            // If the previous IK3 had no IK4, flush it as a bare segment error.
+                            if (pendingBareError != null && !currentIk3HasIk4) {
+                                currentErrors.add(pendingBareError);
+                            }
+                            pendingBareError = new SegmentError(
                                     ik3SegmentId,
                                     ik3SegmentPosition,
                                     ik3SegmentErrorCode,
                                     0,
-                                    "",
+                                    null,
                                     describeSegmentError(ik3SegmentErrorCode)
-                            ));
-                            // Reset IK3 fields
-                            ik3SegmentId = "";
-                            ik3SegmentPosition = 0;
-                            ik3SegmentErrorCode = "";
+                            );
+                            currentIk3HasIk4 = false;
                         } else if ("IK4".equals(currentSegment)) {
-                            // Replace the last error (the IK3 just added) with element info attached
-                            if (!currentErrors.isEmpty()) {
-                                SegmentError prev = currentErrors.removeLast();
+                            // Each IK4 emits a distinct error carrying the pending IK3's segment data.
+                            if (pendingBareError != null) {
                                 currentErrors.add(new SegmentError(
-                                        prev.segmentId(),
-                                        prev.segmentPosition(),
-                                        prev.segmentErrorCode(),
+                                        pendingBareError.segmentId(),
+                                        pendingBareError.segmentPosition(),
+                                        pendingBareError.segmentErrorCode(),
                                         ik4ElementPosition,
                                         ik4ElementErrorCode,
-                                        prev.errorDescription()
+                                        pendingBareError.errorDescription()
                                 ));
+                                currentIk3HasIk4 = true;
                             }
                         } else if ("IK5".equals(currentSegment)) {
+                            // Flush any dangling bare IK3 that had no IK4.
+                            if (pendingBareError != null && !currentIk3HasIk4) {
+                                currentErrors.add(pendingBareError);
+                            }
+                            pendingBareError = null;
+                            currentIk3HasIk4 = false;
                             var envelope = new InterchangeEnvelope(
                                     isaSenderQualifier, isaSenderId,
                                     isaReceiverQualifier, isaReceiverId,
@@ -210,6 +221,11 @@ public class EDI999Parser {
             }
 
             reader.close();
+
+            if (!results.isEmpty() && groupStatus == null) {
+                throw new EdiParseException(
+                        "EDI 999 file is missing AK9 functional group acknowledgment", null);
+            }
 
             // Backfill groupStatus and counts into all results (AK9 comes after all IK5s)
             final FunctionalGroupStatus finalGroupStatus = groupStatus;

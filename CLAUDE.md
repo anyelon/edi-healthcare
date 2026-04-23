@@ -104,6 +104,8 @@ Gradle config (`settings.gradle`, `build.gradle`) stays at the repo root. Module
 
 Next.js 16 app with TypeScript and Tailwind CSS. Uses BFF (Backend-For-Frontend) pattern — API routes in `frontend/src/app/api/` proxy to backend services. The browser never calls backend ports directly.
 
+**Design system:** `DESIGN.md` at the repo root is the single source of truth for the frontend design system — colors, tokens, typography, and component guidance. All frontend work (new pages, component styling, tweaks) must read and conform to `DESIGN.md`. Do not introduce ad-hoc colors, spacing, or typography outside of what it defines; if a token is missing, update `DESIGN.md` first, then use it.
+
 ### Layer Structure (per app)
 
 ```
@@ -117,7 +119,7 @@ Controller → Service → Repository (common) + EDI Service
 
 ## Development Approach
 
-- Always use Test-Driven Development (TDD): write failing tests first, then implement the minimum code to make them pass, then refactor
+- **TDD is non-negotiable.** Every code change follows red → green → refactor: write a failing test first, commit it, then implement the minimum code to make it pass, then refactor. No production code may be written without a failing test that requires it. No exceptions for "simple" changes, bug fixes, spikes, or "I'll add tests later" — if it's worth writing, it's worth testing first.
 - Never commit directly to main — always use feature branches
 
 ## Conventions
