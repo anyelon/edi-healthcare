@@ -2,24 +2,23 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
+  Badge,
+  Button,
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+  DataTable,
+  type ColumnDef,
+} from "@/design-system";
 import { GenerationLayout } from "@/components/generation-layout";
-import { DataTable, type ColumnDef } from "@/components/ui/data-table";
 import { Dropzone } from "@/components/dropzone";
 import {
   fetchEncounters,

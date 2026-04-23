@@ -1,2 +1,15 @@
-// Primitives migrated in Task 7, tuned in Tasks 8–13.
-export {};
+export * from "./alert";
+export * from "./badge";
+export * from "./button";
+export * from "./card";
+export * from "./input";
+export * from "./label";
+export * from "./scroll-area";
+export * from "./separator";
+export * from "./sheet";
+export * from "./sidebar";
+export * from "./skeleton";
+export * from "./sonner";
+export * from "./table";
+export * from "./textarea";
+export * from "./tooltip";

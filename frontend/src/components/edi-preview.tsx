@@ -1,14 +1,14 @@
 "use client";
 
 import { Download } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
+  Button,
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
+  ScrollArea,
+} from "@/design-system";
 import { downloadBlob } from "@/lib/api-client";
 
 interface EdiPreviewProps {

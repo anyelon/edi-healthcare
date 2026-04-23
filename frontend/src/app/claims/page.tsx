@@ -2,10 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import {
+  Badge,
+  Button,
+  DataTable,
+  type ColumnDef,
+} from "@/design-system";
 import { GenerationLayout } from "@/components/generation-layout";
-import { DataTable, type ColumnDef } from "@/components/ui/data-table";
 import { fetchEncounters, generateClaim } from "@/lib/api-client";
 import type { EncounterResponse } from "@/types";
 

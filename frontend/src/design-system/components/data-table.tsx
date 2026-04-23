@@ -8,7 +8,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "../primitives/table";
 import { cn } from "@/lib/utils";
 
 export interface ColumnDef<T> {
