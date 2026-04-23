@@ -17,11 +17,13 @@ docker-compose up -d mongodb
 ./gradlew :claims-app:build
 ./gradlew :insurance-request-app:build
 ./gradlew :insurance-response-app:build
+./gradlew :prior-auth-app:build
 
 # Run individual apps
-./gradlew :claims-app:bootRun          # port 8080
+./gradlew :claims-app:bootRun              # port 8080
 ./gradlew :insurance-request-app:bootRun   # port 8081
 ./gradlew :insurance-response-app:bootRun  # port 8082
+./gradlew :prior-auth-app:bootRun          # port 8083
 
 # Run all tests
 ./gradlew test
@@ -30,6 +32,7 @@ docker-compose up -d mongodb
 ./gradlew :claims-app:test
 ./gradlew :insurance-request-app:test
 ./gradlew :insurance-response-app:test
+./gradlew :prior-auth-app:test
 
 # Run a single test class
 ./gradlew :claims-app:test --tests "com.example.edi.claims.service.EDI837ServiceTest"
@@ -61,9 +64,10 @@ cd frontend && npm run lint
 docker-compose up -d mongodb
 
 # 2. Start backend services (each in its own terminal)
-./gradlew :claims-app:bootRun          # port 8080
+./gradlew :claims-app:bootRun              # port 8080
 ./gradlew :insurance-request-app:bootRun   # port 8081
 ./gradlew :insurance-response-app:bootRun  # port 8082
+./gradlew :prior-auth-app:bootRun          # port 8083
 
 # 3. Start frontend
 cd frontend && npm run dev             # port 3000
@@ -75,6 +79,7 @@ Each app exposes Swagger UI when running:
 - Claims: http://localhost:8080/swagger-ui.html
 - Insurance Request: http://localhost:8081/swagger-ui.html
 - Insurance Response: http://localhost:8082/swagger-ui.html
+- Prior Auth: http://localhost:8083/swagger-ui.html
 
 ## Architecture
 
@@ -85,9 +90,10 @@ Monorepo with `backend/` (Java) and `frontend/` (Next.js) directories. Spring Bo
 ```
 backend/           # Java modules (Gradle build at root)
   common/          # Shared entities and repositories
-  claims-app/      # EDI 837 claims generation (port 8080)
+  claims-app/              # EDI 837 claims generation (port 8080)
   insurance-request-app/   # EDI 270 eligibility requests (port 8081)
-  insurance-response-app/  # EDI 271 response parsing (port 8082)
+  insurance-response-app/  # EDI 271 response parsing + EDI 999 acknowledgments (port 8082)
+  prior-auth-app/          # EDI 278 prior authorization request + response (port 8083)
 frontend/          # Next.js app with BFF API routes (port 3000)
 ```
 
@@ -98,7 +104,8 @@ Gradle config (`settings.gradle`, `build.gradle`) stays at the repo root. Module
 - **common** — Shared `@Document` entities (Patient, Visit, Company, PlaceOfService) and `MongoRepository` interfaces. `java-library` plugin (plain JAR, not a Spring Boot app).
 - **claims-app** (port 8080) — Generates EDI 837P professional claims. POST `/api/claims/generate` with `{encounterIds}` → downloadable `.edi` file.
 - **insurance-request-app** (port 8081) — Generates EDI 270 eligibility inquiries. POST `/api/insurance/eligibility-request` with `{patientIds}` → downloadable `.edi` file.
-- **insurance-response-app** (port 8082) — Parses EDI 271 eligibility responses. POST `/api/insurance/eligibility-response` with multipart file → JSON.
+- **insurance-response-app** (port 8082) — Parses EDI 271 eligibility responses and EDI 999 acknowledgments. POST `/api/insurance/eligibility-response` (271) and POST `/api/insurance/acknowledgment` (999), each with a multipart file → JSON.
+- **prior-auth-app** (port 8083) — Generates and parses EDI 278 prior authorizations. POST `/api/prior-auth/generate` with `{encounterIds}` → downloadable `.edi` file; POST `/api/prior-auth/response` with multipart file → JSON.
 
 ### Frontend
 
@@ -114,7 +121,7 @@ Controller → Service → Repository (common) + EDI Service
 
 - Controllers handle HTTP, validation (`@Valid`), and response formatting
 - Services orchestrate repository lookups and EDI generation/parsing
-- EDI services (`EDI837Service`, `EDI270Service`, `EDI271Service`) are pure business logic — no repository access
+- EDI services (`EDI837Service`, `EDI270Service`, `EDI271Service`, `EDI278Generator`/`EDI278Parser`, `EDI999Service`) are pure business logic — no repository access
 - `@EnableMongoRepositories` lives in each app's `config/MongoConfig.java` (separated from `@SpringBootApplication` for clean `@WebMvcTest` slicing)
 
 ## Development Approach
