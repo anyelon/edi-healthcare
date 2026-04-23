@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button, DataTable, type ColumnDef } from "@/design-system";
 import { GenerationLayout } from "@/components/generation-layout";
-import { DataTable, type ColumnDef } from "@/components/ui/data-table";
 import { fetchPatients, generateEligibilityRequest } from "@/lib/api-client";
 import type { PatientResponse } from "@/types";
 

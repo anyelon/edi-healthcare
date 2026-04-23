@@ -22,7 +22,7 @@ import {
   SidebarMenuItem,
   SidebarHeader,
   SidebarSeparator,
-} from "@/components/ui/sidebar";
+} from "@/design-system";
 import { seedDatabase } from "@/lib/api-client";
 
 const workflowItems = [

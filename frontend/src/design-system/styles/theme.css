@@ -1,0 +1,171 @@
+/*
+ * Design system tokens. Source of truth: specs/012-design-system/design.md.
+ * All --ds-* variables live here. Shadcn variables alias to --ds-* below.
+ */
+
+:root {
+  /* Core palette */
+  --ds-primary: #0F172A;
+  --ds-primary-foreground: #FFFFFF;
+  --ds-secondary: #2563EB;
+  --ds-secondary-foreground: #FFFFFF;
+  --ds-background: #F8FAFC;
+  --ds-surface: #FFFFFF;
+  --ds-foreground: #1b1b1d;
+  --ds-muted-foreground: #45464d;
+  --ds-border: #E2E8F0;
+  --ds-outline: #76777d;
+  --ds-ring: #2563EB;
+  --ds-shadow-popover: 0 4px 12px rgba(15, 23, 42, 0.08);
+
+  /* Tonal surface ladder (YAML) */
+  --ds-surface-container-lowest: #ffffff;
+  --ds-surface-container-low: #f6f3f5;
+  --ds-surface-container: #f0edef;
+  --ds-surface-container-high: #eae7e9;
+  --ds-surface-container-highest: #e4e2e4;
+
+  /* Status */
+  --ds-success: #10B981;
+  --ds-success-bg: #ECFDF5;
+  --ds-success-fg: #065F46;
+  --ds-warning: #F59E0B;
+  --ds-warning-bg: #FFFBEB;
+  --ds-warning-fg: #92400E;
+  --ds-error: #EF4444;
+  --ds-error-bg: #FEF2F2;
+  --ds-error-fg: #991B1B;
+
+  /* Radius */
+  --radius: 0.25rem;
+
+  /* Shadcn compatibility bridge */
+  --background: var(--ds-background);
+  --foreground: var(--ds-foreground);
+  --card: var(--ds-surface);
+  --card-foreground: var(--ds-foreground);
+  --popover: var(--ds-surface);
+  --popover-foreground: var(--ds-foreground);
+  --primary: var(--ds-primary);
+  --primary-foreground: var(--ds-primary-foreground);
+  --secondary: var(--ds-secondary);
+  --secondary-foreground: var(--ds-secondary-foreground);
+  --muted: var(--ds-surface-container-low);
+  --muted-foreground: var(--ds-muted-foreground);
+  --accent: var(--ds-surface-container);
+  --accent-foreground: var(--ds-foreground);
+  --border: var(--ds-border);
+  --input: var(--ds-border);
+  --ring: var(--ds-ring);
+  --destructive: var(--ds-error);
+
+  /* Sidebar (shadcn-sidebar vars) */
+  --sidebar: var(--ds-surface);
+  --sidebar-foreground: var(--ds-foreground);
+  --sidebar-primary: var(--ds-primary);
+  --sidebar-primary-foreground: var(--ds-primary-foreground);
+  --sidebar-accent: var(--ds-surface-container-low);
+  --sidebar-accent-foreground: var(--ds-foreground);
+  --sidebar-border: var(--ds-border);
+  --sidebar-ring: var(--ds-ring);
+}
+
+@theme inline {
+  /* Color utilities */
+  --color-ds-primary: var(--ds-primary);
+  --color-ds-primary-foreground: var(--ds-primary-foreground);
+  --color-ds-secondary: var(--ds-secondary);
+  --color-ds-secondary-foreground: var(--ds-secondary-foreground);
+  --color-ds-background: var(--ds-background);
+  --color-ds-surface: var(--ds-surface);
+  --color-ds-foreground: var(--ds-foreground);
+  --color-ds-muted-foreground: var(--ds-muted-foreground);
+  --color-ds-border: var(--ds-border);
+  --color-ds-outline: var(--ds-outline);
+  --color-ds-ring: var(--ds-ring);
+  --color-ds-success: var(--ds-success);
+  --color-ds-success-bg: var(--ds-success-bg);
+  --color-ds-success-fg: var(--ds-success-fg);
+  --color-ds-warning: var(--ds-warning);
+  --color-ds-warning-bg: var(--ds-warning-bg);
+  --color-ds-warning-fg: var(--ds-warning-fg);
+  --color-ds-error: var(--ds-error);
+  --color-ds-error-bg: var(--ds-error-bg);
+  --color-ds-error-fg: var(--ds-error-fg);
+
+  /* Shadcn utility bridge — exposes the :root shadcn aliases as Tailwind color utilities
+   * (bg-background, text-foreground, border-border, etc.) so existing shadcn primitives
+   * and consumer classNames keep working unchanged. */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Radius scale — aliases that primitives reference via var(--radius-*) */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+
+  /* Spacing utilities (additive to Tailwind's numeric scale).
+   * Prefixed with ds- to avoid collision with Tailwind's --container-* keys
+   * (xs/sm/md/lg/xl) used by max-w-*, w-*, h-*, size-*, etc. */
+  --spacing-ds-xs: 4px;
+  --spacing-ds-sm: 8px;
+  --spacing-ds-md: 16px;
+  --spacing-ds-lg: 24px;
+  --spacing-ds-xl: 32px;
+  --spacing-gutter: 20px;
+  --spacing-container-margin: 40px;
+
+  /* Fonts — variables set by next/font in fonts.ts (Task 4) */
+  --font-sans: var(--font-inter);
+  --font-heading: var(--font-manrope);
+
+  /* Text utilities */
+  --text-h1: 32px;
+  --text-h1--line-height: 40px;
+  --text-h1--font-weight: 700;
+  --text-h1--letter-spacing: -0.02em;
+  --text-h2: 24px;
+  --text-h2--line-height: 32px;
+  --text-h2--font-weight: 600;
+  --text-h2--letter-spacing: -0.01em;
+  --text-h3: 20px;
+  --text-h3--line-height: 28px;
+  --text-h3--font-weight: 600;
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 24px;
+  --text-body-lg--font-weight: 400;
+  --text-body-md: 14px;
+  --text-body-md--line-height: 20px;
+  --text-body-md--font-weight: 400;
+  --text-label-md: 12px;
+  --text-label-md--line-height: 16px;
+  --text-label-md--font-weight: 600;
+  --text-table-data: 13px;
+  --text-table-data--line-height: 18px;
+  --text-table-data--font-weight: 400;
+}

@@ -2,22 +2,21 @@
 
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 import {
+  Alert,
+  AlertDescription,
+  Badge,
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+} from "@/design-system";
 import { Dropzone } from "@/components/dropzone";
 import { parseEligibilityResponse } from "@/lib/api-client";
 import type { EligibilityResponse } from "@/types";

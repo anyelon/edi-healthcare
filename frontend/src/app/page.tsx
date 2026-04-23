@@ -1,15 +1,15 @@
 import Link from "next/link";
 import { FileText, ArrowRightLeft, FileSearch, ShieldCheck } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
+  Badge,
+  Button,
   Card,
   CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@/design-system";
 
 const workflows = [
   {

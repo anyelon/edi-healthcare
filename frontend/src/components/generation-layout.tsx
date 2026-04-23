@@ -1,8 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge, Button } from "@/design-system";
 import { EdiPreview } from "@/components/edi-preview";
 
 interface GenerationLayoutProps {
