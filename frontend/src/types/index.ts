@@ -100,3 +100,42 @@ export interface PatientResponse {
   zipCode: string;
   phone: string;
 }
+
+export interface SegmentError {
+  segmentId: string;
+  segmentPosition: number;
+  segmentErrorCode: string;
+  elementPosition: number;
+  elementErrorCode: string | null;
+  errorDescription: string;
+}
+
+export interface EDI999Acknowledgment {
+  envelope: {
+    senderIdQualifier: string;
+    senderId: string;
+    receiverIdQualifier: string;
+    receiverId: string;
+    date: string;
+    time: string;
+    controlNumber: string;
+    ackRequested: string;
+    usageIndicator: string;
+  };
+  functionalGroup: {
+    senderId: string;
+    receiverId: string;
+    date: string;
+    time: string;
+    controlNumber: string;
+  };
+  acknowledgedGroupControlNumber: string;
+  acknowledgedTransactionSetId: string;
+  acknowledgedTransactionControlNumber: string;
+  transactionStatus: "ACCEPTED" | "ACCEPTED_WITH_ERRORS" | "REJECTED";
+  groupStatus: "ACCEPTED" | "ACCEPTED_WITH_ERRORS" | "REJECTED" | "PARTIALLY_ACCEPTED";
+  transactionSetsIncluded: number;
+  transactionSetsReceived: number;
+  transactionSetsAccepted: number;
+  errors: SegmentError[];
+}
