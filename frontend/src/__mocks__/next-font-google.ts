@@ -7,7 +7,3 @@ const mockFont = () => ({
 
 export const Inter = mockFont;
 export const Manrope = mockFont;
-export const Roboto = mockFont;
-export const Open_Sans = mockFont;
-export const Lato = mockFont;
-export const Poppins = mockFont;
